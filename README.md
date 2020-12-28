@@ -1,4 +1,4 @@
-![Alt text](Image URL)
+![yacs icon](https://github.com/jbelenguer/yacs-net/blob/master/yacs_64.png)
 # YACS.NET
 Yet another communication system for .NET
 
