@@ -1,5 +1,5 @@
-![yacs icon](https://github.com/jbelenguer/yacs-net/blob/master/yacs_64.png)
 # YACS.NET
+![yacs icon](https://github.com/jbelenguer/yacs-net/blob/master/yacs_64.png)
 Yet another communication system for .NET
 
 ## Motivation
