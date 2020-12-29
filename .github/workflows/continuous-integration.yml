@@ -2,9 +2,11 @@ name: ContinuousIntegration
 
 on:
   push:
-    branches: [ versions/* ]
+    branches: 
+      - '*'
   pull_request:
-    branches: [ versions/* ]
+    branches: 
+      - '*'
 
 jobs:
   build:
