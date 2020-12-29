@@ -123,6 +123,19 @@ namespace Yacs
         }
 
         /// <summary>
+        /// Gets if a specific <see cref="Channel"/> is online.
+        /// </summary>
+        /// <param name="channel"></param>
+        /// <returns></returns>
+        public bool IsChannelOnline(EndPoint channel)
+        {
+            lock (_channelsLock)
+            {
+                return _knownClients.ContainsKey(channel);
+            }
+        }
+
+        /// <summary>
         /// Stops the <see cref="Server"/> in an ordered manner, releasing all the resources used by it.
         /// </summary>
         public void Dispose()
