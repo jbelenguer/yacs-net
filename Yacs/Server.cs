@@ -19,7 +19,7 @@ namespace Yacs
     {
         private const int DEFAULT_DELAY = 250;
         private readonly object _channelsLock = new object();
-        
+
         private readonly int _port;
         private readonly TcpListener _tcpServer;
         private readonly Dictionary<EndPoint, Channel> _knownClients;
@@ -57,6 +57,11 @@ namespace Yacs
         /// If the feature was enabled on creation, this flag enables or disables the discovery.
         /// </summary>
         public bool DiscoveryEnabled { get; set; }
+
+        public int ChannelsCount
+        {
+            get { lock (_channelsLock) { return _knownClients.Count; } }
+        }
 
         /// <summary>
         /// Creates a new Yacs <see cref="Server"/>. Then it can accept connections from many <see cref="Channel"/>.
@@ -99,11 +104,19 @@ namespace Yacs
         /// <param name="message">Message to send.</param>
         public void Send(EndPoint destination, string message)
         {
-            if (_knownClients.ContainsKey(destination))
+            bool errored = false;
+            lock (_channelsLock)
             {
-                _knownClients[destination].Send(message);
+                if (_knownClients.ContainsKey(destination))
+                {
+                    _knownClients[destination].Send(message);
+                }
+                else
+                {
+                    errored = true;
+                }
             }
-            else
+            if (errored)
             {
                 OnError(new ChannelErrorEventArgs(destination, new OfflineChannelException(destination)));
             }
@@ -203,20 +216,23 @@ namespace Yacs
                         var newChannel = new Channel(tcpClient, _newChannelOptions);
                         lock (_channelsLock)
                         {
-                            if (_knownClients.ContainsKey(newChannel.RemoteEndPoint))
+                            if (_options.MaximumChannels > 0 && _knownClients.Count < _options.MaximumChannels)
                             {
-                                _knownClients[newChannel.RemoteEndPoint].Dispose();
-                                _knownClients[newChannel.RemoteEndPoint] = newChannel;
-                            }
-                            else
-                            {
-                                _knownClients.Add(tcpClient.Client.RemoteEndPoint, newChannel);
+                                newChannel.ConnectionLost += Channel_ConnectionLost;
+                                newChannel.MessageReceived += Channel_MessageReceived;
+                                newChannel.ChannelError += Channel_Error;
+
+                                if (_knownClients.ContainsKey(newChannel.RemoteEndPoint))
+                                {
+                                    _knownClients[newChannel.RemoteEndPoint].Dispose();
+                                    _knownClients[newChannel.RemoteEndPoint] = newChannel;
+                                }
+                                else
+                                {
+                                    _knownClients.Add(tcpClient.Client.RemoteEndPoint, newChannel);
+                                }
                             }
                         }
-
-                        newChannel.ConnectionLost += Channel_ConnectionLost;
-                        newChannel.MessageReceived += Channel_MessageReceived;
-                        newChannel.ChannelError += Channel_Error;
 
                         var connectionReceivedEventArgs = new ConnectionReceivedEventArgs(newChannel.RemoteEndPoint);
                         OnConnectionReceived(connectionReceivedEventArgs);
@@ -270,12 +286,15 @@ namespace Yacs
 
         private void Channel_ConnectionLost(object sender, ConnectionLostEventArgs e)
         {
-            if (_knownClients.TryGetValue(e.EndPoint, out var channel))
+            lock (_channelsLock)
             {
-                channel.Dispose();
-                lock (_channelsLock)
+                if (_knownClients.TryGetValue(e.EndPoint, out var channel))
                 {
-                    _knownClients.Remove(e.EndPoint);
+                    channel.Dispose();
+                    lock (_channelsLock)
+                    {
+                        _knownClients.Remove(e.EndPoint);
+                    }
                 }
             }
             OnConnectionLost(e);
