@@ -136,6 +136,32 @@ namespace Yacs
         }
 
         /// <summary>
+        /// Disconnects a specific <see cref="Channel"/>.
+        /// </summary>
+        /// <param name="channel"></param>
+        public void Disconnect(EndPoint channel)
+        {
+            bool errored = false;
+            lock (_channelsLock)
+            {
+                if (_knownClients.ContainsKey(channel))
+                {
+                    _knownClients[channel].Dispose();
+                }
+                else
+                {
+                    errored = true;
+                }
+                _knownClients.Remove(channel);
+            }
+            
+            if (errored)
+            {
+                OnError(new ChannelErrorEventArgs(channel, new OfflineChannelException(channel)));
+            }
+        }
+
+        /// <summary>
         /// Stops the <see cref="Server"/> in an ordered manner, releasing all the resources used by it.
         /// </summary>
         public void Dispose()
