@@ -16,7 +16,7 @@
         public int DiscoveryPort { get; set; }
 
         /// <summary>
-        /// Creates a new <see cref="ServerOptions" object with the default values./>
+        /// Creates a new <see cref="ServerOptions"/> object with the default values.
         /// </summary>
         public ServerOptions() : base()
         {
