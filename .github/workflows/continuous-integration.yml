@@ -2,9 +2,11 @@ name: .NET
 
 on:
   push:
-    branches: [ versions/* ]
+    branches: 
+      - 'versions/*'
   pull_request:
-    branches: [ versions/* ]
+    branches:
+      - 'versions/*'
 
 jobs:
   build:
