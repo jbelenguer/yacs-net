@@ -1,6 +1,8 @@
 name: .NET
 
 on:
+  push:
+    branches: [ versions/* ]
   pull_request:
     branches: [ versions/* ]
 
