@@ -16,11 +16,17 @@
         public int DiscoveryPort { get; set; }
 
         /// <summary>
+        /// Gets or sets the maximum number of clients allowed. Default: Infinite
+        /// </summary>
+        public int MaximumChannels { get; set; }
+
+        /// <summary>
         /// Creates a new <see cref="ServerOptions" object with the default values./>
         /// </summary>
         public ServerOptions() : base()
         {
             DiscoveryPort = 11000;
+            MaximumChannels = 0;
         }
     }
 }
