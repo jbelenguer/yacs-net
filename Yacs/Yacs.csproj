@@ -2,6 +2,27 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <Description>Contains the Yacs communication system.</Description>
+    <PackageReleaseNotes>First version</PackageReleaseNotes>
+    <RepositoryUrl>https://github.com/jbelenguer/yacs-net</RepositoryUrl>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <NoWarn>NU1701;NU5105;</NoWarn>
+    <IncludeSymbols>true</IncludeSymbols>
+    <EmbedAllSources>true</EmbedAllSources>
+    <DocumentationFile>.\bin\Debug\Yacs.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <NoWarn>NU1701;</NoWarn>
+    <DocumentationFile>.\bin\Release\Yacs.xml</DocumentationFile>
+  </PropertyGroup>
+
 
 </Project>
