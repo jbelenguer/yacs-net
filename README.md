@@ -13,7 +13,7 @@ Either if you are developing a game, or your own IoT system, the only option out
 Since this is not the first time I find this issue, I decided to write one so I can reuse it in a couple of projects.
 
 ## Basic usage
-For the basic usage you will need the classes in the namespace `Yacs`. So:
+For the basic usage you will need the classes in the namespace `Yacs`. So: 
 ```cs
 using Yacs;
 ```
