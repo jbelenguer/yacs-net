@@ -6,6 +6,7 @@
     <VersionPrefix>0.1.0</VersionPrefix>
     <Description>Contains the Yacs communication system.</Description>
     <PackageReleaseNotes>First version</PackageReleaseNotes>
+    <RepositoryUrl>https://github.com/jbelenguer/yacs-net</RepositoryUrl>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
