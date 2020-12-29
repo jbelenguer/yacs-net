@@ -1,12 +1,10 @@
-name: NuGet continuous integration
+name: ContinuousIntegration
 
 on:
   push:
-    branches: 
-      - 'versions/*'
+    branches: [ versions/* ]
   pull_request:
-    branches:
-      - 'versions/*'
+    branches: [ versions/* ]
 
 jobs:
   build:
@@ -18,12 +16,10 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
-        source-url: https://nuget.pkg.github.com/jbelenguer/index.json
-      env:
-        NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}  
-    - name: Build solution and generate NuGet package
-      run: |  
-        cd <project>
-        dotnet pack -c Release -o out  
-    - name: Push generated package to GitHub registry
-      run: dotnet nuget push ./<project>/out/*.nupkg --skip-duplicate 
+        dotnet-version: 3.1.301
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --no-restore
+    - name: Test
+      run: dotnet test --no-build --verbosity normal
