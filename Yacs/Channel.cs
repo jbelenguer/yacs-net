@@ -25,8 +25,9 @@ namespace Yacs
         private readonly Task _messageReceptionTask;
         private bool disposedValue;
 
-        public bool Online { get; private set; }
-
+        /// <summary>
+        /// Gets the end point for this channel.
+        /// </summary>
         public EndPoint RemoteEndPoint { get; private set; }
 
         internal Channel(TcpClient tcpClient, ChannelOptions options)
@@ -43,6 +44,7 @@ namespace Yacs
         /// </summary>
         /// <param name="serverUrl">Url to connect to.</param>
         /// <param name="port">TCP/UDP port number.</param>
+        /// <param name="options"><see cref="ChannelOptions"/> to initialise the channel.</param>
         public Channel(string serverUrl, int port, ChannelOptions options = null) 
         {
             if (options == null)
@@ -118,6 +120,9 @@ namespace Yacs
             }
         }
 
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
         public void Dispose()
         {
             Dispose(disposing: true);
@@ -125,20 +130,24 @@ namespace Yacs
         }
 
         /// <summary>
-        /// Event triggered when a new message is received in the <see cref="Channel"/>.
+        /// Event triggered to indicate there is a new message.
         /// </summary>
         public event EventHandler<MessageReceivedEventArgs> MessageReceived;
 
         /// <summary>
-        /// Event triggered when the <see cref="Channel"/>'s connection is lost.
+        /// Event triggered indicating a <see cref="Channel"/> connection lost.
         /// </summary>
         public event EventHandler<ConnectionLostEventArgs> ConnectionLost;
 
         /// <summary>
-        /// Event triggered when there is an error.
+        /// Event triggered indicating an error.
         /// </summary>
         public event EventHandler<ChannelErrorEventArgs> ChannelError;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="disposing"></param>
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
@@ -157,16 +166,28 @@ namespace Yacs
             }
         }
 
+        /// <summary>
+        /// Triggers a <see cref="MessageReceived"/> event.
+        /// </summary>
+        /// <param name="e">Event arguments.</param>
         protected virtual void OnMessageReceived(MessageReceivedEventArgs e)
         {
             MessageReceived?.Invoke(this, e);
         }
 
+        /// <summary>
+        /// Triggers a <see cref="ConnectionLost"/> event.
+        /// </summary>
+        /// <param name="e">Event arguments.</param>
         protected virtual void OnConnectionLost(ConnectionLostEventArgs e)
         {
             ConnectionLost?.Invoke(this, e);
         }
 
+        /// <summary>
+        /// Triggers a <see cref="ChannelError"/> event.
+        /// </summary>
+        /// <param name="e">Event arguments.</param>
         protected virtual void OnError(ChannelErrorEventArgs e)
         {
             ChannelError?.Invoke(this, e);

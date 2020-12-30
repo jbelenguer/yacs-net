@@ -42,11 +42,8 @@ namespace Yacs
         /// </summary>
         public bool Enabled
         {
-            get
-            {
-                return _enabled;
-            }
-            set
+            get { return _enabled; }
+            set 
             {
                 _enabled = value;
                 DiscoveryEnabled = _enabled && _options.IsDiscoverable;
@@ -191,6 +188,10 @@ namespace Yacs
         /// </summary>
         public event EventHandler<ChannelErrorEventArgs> ChannelError;
 
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        /// <param name="disposing"></param>
         protected virtual void Dispose(bool disposing)
         {
             if (!disposedValue)
@@ -216,26 +217,46 @@ namespace Yacs
             }
         }
 
+        /// <summary>
+        /// Triggers a <see cref="ConnectionReceived"/> event.
+        /// </summary>
+        /// <param name="e">Event arguments.</param>
         protected virtual void OnConnectionReceived(ConnectionReceivedEventArgs e)
         {
             ConnectionReceived?.Invoke(this, e);
         }
 
+        /// <summary>
+        /// Triggers a <see cref="DiscoveryRequestReceived"/> event.
+        /// </summary>
+        /// <param name="e">Event arguments.</param>
         protected virtual void OnDiscoveryRequestReceived(DiscoveryRequestEventArgs e)
         {
             DiscoveryRequestReceived?.Invoke(this, e);
         }
 
+        /// <summary>
+        /// Triggers a <see cref="ConnectionLost"/> event.
+        /// </summary>
+        /// <param name="e">Event arguments.</param>
         protected virtual void OnConnectionLost(ConnectionLostEventArgs e)
         {
             ConnectionLost?.Invoke(this, e);
         }
 
+        /// <summary>
+        /// Triggers a <see cref="MessageReceived"/> event.
+        /// </summary>
+        /// <param name="e">Event arguments.</param>
         protected virtual void OnMessageReceived(MessageReceivedEventArgs e)
         {
             MessageReceived?.Invoke(this, e);
         }
 
+        /// <summary>
+        /// Triggers a <see cref="ChannelError"/> event.
+        /// </summary>
+        /// <param name="e">Event arguments.</param>
         protected virtual void OnError(ChannelErrorEventArgs e)
         {
             ChannelError?.Invoke(this, e);
