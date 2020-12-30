@@ -35,8 +35,8 @@ jobs:
       run: dotnet build --configuration Release --no-restore
 
     - name: Pack
-      run: dotnet pack ${{ env.APP_NAME }}/${{ env.APP_NAME }}.csproj --output nuget-packages --configuration Release --include-symbols -p:SymbolPackageFormat=snupkg
-
+      run: dotnet pack --output nuget-packages --configuration Release --include-symbols -p:SymbolPackageFormat=snupkg
+#${{ env.APP_NAME }}/${{ env.APP_NAME }}.csproj 
     - name: Add NuGet sources
       run: |
         dotnet nuget add source https://nuget.pkg.github.com/${{ env.GITHUB_REPOSITORY_OWNER }}/index.json --name github
