@@ -55,7 +55,10 @@ namespace Yacs
         /// </summary>
         public bool DiscoveryEnabled { get; set; }
 
-        public int ChannelsCount
+        /// <summary>
+        /// Gets the number of channels online.
+        /// </summary>
+        public int ChannelCount
         {
             get { lock (_channelsLock) { return _knownClients.Count; } }
         }
