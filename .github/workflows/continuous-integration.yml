@@ -3,11 +3,19 @@ name: ContinuousIntegration
 on:
   push:
     branches: 
-      - '*'
+      - master
   pull_request:
     branches: 
-      - '*'
+      - master
 
+env:
+  APP_NAME: yacs                                            # set this to your application's name
+  APP_PACKAGE_PATH: './published'                           # set this to the path to your app project, defaults to the repository root
+  GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}   # set this to access token to github.com
+  GITHUB_API_KEY: ${{ github.token }}                       # set this to access token to github.com
+  NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}               # set this to access token to nuget.org
+  
+  
 jobs:
   build:
 
@@ -19,9 +27,27 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 3.1.301
+        
     - name: Restore dependencies
       run: dotnet restore
+      
     - name: Build
-      run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Pack
+      run: dotnet pack ${{ env.APP_NAME }}/${{ env.APP_NAME }}.csproj --output nuget-packages --configuration Release --include-symbols -p:SymbolPackageFormat=snupkg
+
+    - name: Add NuGet sources
+      run: |
+        dotnet nuget add source https://nuget.pkg.github.com/${{ env.GITHUB_REPOSITORY_OWNER }}/index.json --name github
+    - name: NuGet push on GitHub
+      run: dotnet nuget push "**/*.nupkg" --source github --api-key ${{ env.GITHUB_API_KEY }} --skip-duplicate
+
+    #- name: NuGet push on NuGet
+    #  run: dotnet nuget push "**/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+
+    - name: Upload NuGet package
+      uses: actions/upload-artifact@v2.2.1
+      with:
+        name: ${{ env.APP_NAME }}
+        path: "**/*.nupkg"
