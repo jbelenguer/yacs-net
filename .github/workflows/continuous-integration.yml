@@ -18,6 +18,7 @@ env:
   VERSION_MINOR: 1
   VERSION_PATCH: 1
   VERSION_BUILD: ${{ github.run_number }}
+  SUFFIX: ''
   
   
 jobs:
@@ -28,9 +29,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - if: github.ref == 'refs/heads/master'
+      env:
+        SUFFIX: '-alpha'
+    
     - name: Print new build number
-      run: echo "Build number is ${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ env.VERSION_BUILD }}"
-        
+      run: echo "Build number is ${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ env.VERSION_BUILD }}${{ env.SUFFIX }}"
+    
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
@@ -43,7 +48,7 @@ jobs:
       run: dotnet build 
         --configuration Release 
         --no-restore
-        -property:AssemblyVersion=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}
+        -property:AssemblyVersion=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ env.VERSION_BUILD }}
         -property:Version=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}
 
     - name: Pack
