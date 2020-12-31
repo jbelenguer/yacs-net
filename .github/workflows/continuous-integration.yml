@@ -34,9 +34,9 @@ jobs:
     - name: Usage
       id: suffix
       env:
-        SUFFIX: "alpha${{ steps.time.outputs.time }}"
+        TIME: "${{ steps.time.outputs.time }}"
       run: |
-        echo $SUFFIX
+        echo $TIME
     - uses: actions/checkout@v2
     
     - name: Print new build number
@@ -56,7 +56,7 @@ jobs:
         --no-restore
         -property:AssemblyVersion=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ github.run_number }}
         -property:VersionPrefix=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}
-        -property:VersionSuffix=${{ steps.suffix.outputs.suffix }}
+        -property:VersionSuffix=alpha${{ steps.time.outputs.time }}
 
     - name: Pack
       run: dotnet pack --output nuget-packages --configuration ${{ env.CONFIGURATION }} --include-symbols -p:SymbolPackageFormat=snupkg
