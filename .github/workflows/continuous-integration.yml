@@ -40,7 +40,7 @@ jobs:
     - uses: actions/checkout@v2
     
     - name: Print new build number
-      run: echo "Build number is ${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ env.VERSION_BUILD }}-alpha${{ steps.time.outputs.time }}"
+      run: echo "Build number is ${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ env.VERSION_BUILD }}"
     
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
@@ -54,8 +54,9 @@ jobs:
       run: dotnet build 
         --configuration ${{ env.CONFIGURATION }} 
         --no-restore
-        -property:AssemblyVersion=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ env.VERSION_BUILD }}-alpha${{ steps.time.outputs.time }}
-        -property:Version=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}
+        -property:AssemblyVersion=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ env.VERSION_BUILD }}
+        -property:VersionPrefix=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}
+        -property:VersionSuffix=-alpha${{ steps.time.outputs.time }}
 
     - name: Pack
       run: dotnet pack --output nuget-packages --configuration ${{ env.CONFIGURATION }} --include-symbols -p:SymbolPackageFormat=snupkg
