@@ -14,11 +14,11 @@ env:
   GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}   # set this to access token to github.com
   GITHUB_API_KEY: ${{ github.token }}                       # set this to access token to github.com
   NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}               # set this to access token to nuget.org
+  CONFIGURATION: Debug
   VERSION_MAJOR: 0
   VERSION_MINOR: 1
   VERSION_PATCH: 1
   VERSION_BUILD: ${{ github.run_number }}
-  SUFFIX: ''
   
   
 jobs:
@@ -27,15 +27,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-
-    - if: github.ref == 'refs/heads/master'
-      run: echo 'Running master'
+    - name: Get Time
+      id: time
+      uses: nanzm/get-time-action@v1.1
+      with:
+        format: 'YYYYMMDDHHmmss'
+    - name: Usage
       env:
-        SUFFIX: '-alpha'
+        TIME: "${{ steps.time.outputs.time }}"
+      run: |
+        echo $TIME
+    - uses: actions/checkout@v2
     
     - name: Print new build number
-      run: echo "Build number is ${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ env.VERSION_BUILD }}${{ env.SUFFIX }}"
+      run: echo "Build number is ${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ env.VERSION_BUILD }}-alpha${{ steps.time.outputs.time }}"
     
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
@@ -47,13 +52,13 @@ jobs:
       
     - name: Build
       run: dotnet build 
-        --configuration Release 
+        --configuration ${{ env.CONFIGURATION }} 
         --no-restore
-        -property:AssemblyVersion=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ env.VERSION_BUILD }}
+        -property:AssemblyVersion=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ env.VERSION_BUILD }}${{ env.SUFFIX }}
         -property:Version=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}
 
     - name: Pack
-      run: dotnet pack --output nuget-packages --configuration Release --include-symbols -p:SymbolPackageFormat=snupkg
+      run: dotnet pack --output nuget-packages --configuration ${{ env.CONFIGURATION }} --include-symbols -p:SymbolPackageFormat=snupkg
       
     - name: Add NuGet sources
       run: |
