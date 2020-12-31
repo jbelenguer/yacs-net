@@ -26,8 +26,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      
     - name: Nuget Build Number Generator
       uses: emrekas/build-number@v3
+      with:
+        token: ${{ env.GITHUB_API_KEY }}
+        
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
@@ -41,10 +45,11 @@ jobs:
 
     - name: Pack
       run: dotnet pack --output nuget-packages --configuration Release --include-symbols -p:SymbolPackageFormat=snupkg
-#${{ env.APP_NAME }}/${{ env.APP_NAME }}.csproj 
+      
     - name: Add NuGet sources
       run: |
         dotnet nuget add source https://nuget.pkg.github.com/${{ env.GITHUB_REPOSITORY_OWNER }}/index.json --name github
+        
     - name: NuGet push on GitHub
       run: dotnet nuget push "**/*.nupkg" --source github --api-key ${{ env.GITHUB_API_KEY }} --skip-duplicate
 
