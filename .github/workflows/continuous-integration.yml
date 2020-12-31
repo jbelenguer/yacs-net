@@ -14,6 +14,9 @@ env:
   GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}   # set this to access token to github.com
   GITHUB_API_KEY: ${{ github.token }}                       # set this to access token to github.com
   NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}               # set this to access token to nuget.org
+  versionMajor: 0
+  versionMinor: 1
+  versionPatch: 1
   
   
 jobs:
@@ -23,6 +26,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Nuget Build Number Generator
+      uses: emrekas/build-number@v3
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
