@@ -42,7 +42,7 @@ jobs:
       run: dotnet build 
         --configuration Release 
         --no-restore
-        -property:AssemblyVersion=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.$GITHUB_RUN_NUMBER
+        -property:AssemblyVersion=$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH.$GITHUB_RUN_NUMBER
         -property:Version=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}
 
     - name: Pack
