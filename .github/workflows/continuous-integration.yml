@@ -30,7 +30,10 @@ jobs:
     - name: Nuget Build Number Generator
       uses: emrekas/build-number@v3
       with:
-        token: ${{ env.GITHUB_API_KEY }}
+        token: ${{secrets.github_token}}
+
+    - name: Print new build number
+      run: echo "Build number is $BUILD_NUMBER"
         
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
