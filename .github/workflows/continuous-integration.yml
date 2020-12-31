@@ -17,7 +17,7 @@ env:
   VERSION_MAJOR: 0
   VERSION_MINOR: 1
   VERSION_PATCH: 1
-  VERSION_BUILD: ${{ GITHUB_RUN_NUMBER }}
+  VERSION_BUILD: ${{ github.run_number }}
   
   
 jobs:
