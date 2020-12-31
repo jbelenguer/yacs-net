@@ -3,10 +3,10 @@ name: ContinuousIntegration
 on:
   push:
     branches: 
-      - master
+      - '*'
   pull_request:
     branches: 
-      - master
+      - '*'
 
 env:
   APP_NAME: yacs                                            # set this to your application's name
@@ -23,7 +23,7 @@ env:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: windows-2019
 
     steps:
     - name: Get Time
@@ -31,13 +31,16 @@ jobs:
       uses: nanzm/get-time-action@v1.1
       with:
         format: 'YYYYMMDDHHmmss'
+        
     - name: Usage
       id: suffix
       env:
         TIME: "${{ steps.time.outputs.time }}"
       run: |
         echo $TIME
-    - uses: actions/checkout@v2
+        
+    - name: Checkout code
+      uses: actions/checkout@v2
     
     - name: Print new build number
       run: echo "Build number is ${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ github.run_number }}"
