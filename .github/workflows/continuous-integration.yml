@@ -17,7 +17,7 @@ env:
   CONFIGURATION: Debug
   VERSION_MAJOR: 0
   VERSION_MINOR: 1
-  VERSION_PATCH: 1
+  VERSION_PATCH: 2
   VERSION_BUILD: ${{ github.run_number }}
   
   
@@ -54,7 +54,7 @@ jobs:
       run: dotnet build 
         --configuration ${{ env.CONFIGURATION }} 
         --no-restore
-        -property:AssemblyVersion=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ env.VERSION_BUILD }}${{ env.SUFFIX }}
+        -property:AssemblyVersion=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ env.VERSION_BUILD }}-alpha${{ steps.time.outputs.time }}
         -property:Version=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}
 
     - name: Pack
