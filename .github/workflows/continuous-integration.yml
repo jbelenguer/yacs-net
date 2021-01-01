@@ -18,20 +18,27 @@ env:
   VERSION_MAJOR: 0
   VERSION_MINOR: 1
   VERSION_PATCH: 2
-  
+  SUFFIX: ''
   
 jobs:
   build:
 
-    runs-on: windows-2019
+    runs-on: ubuntu-latest
 
     steps:
+    - name: Initialize workflow variables
+      id: vars
+      shell: bash
+      run: |
+          unset IS_DEBUG
+          if [${{ github.ref }} == 'refs/heads/master']; then echo "It is MASTER" ; fi
+    
     - name: Get Time
       id: time
       uses: nanzm/get-time-action@v1.1
       with:
         format: 'YYYYMMDDHHmmss'
-        
+      
     - name: Usage
       id: suffix
       env:
@@ -54,12 +61,14 @@ jobs:
       run: dotnet restore
       
     - name: Build
+      if: github.ref != 'refs/heads/master'
       run: dotnet build 
         --configuration ${{ env.CONFIGURATION }} 
         --no-restore
         -property:AssemblyVersion=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ github.run_number }}
         -property:VersionPrefix=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}
         -property:VersionSuffix=alpha${{ steps.time.outputs.time }}
+       
 
     - name: Pack
       run: dotnet pack --output nuget-packages --configuration ${{ env.CONFIGURATION }} --include-symbols -p:SymbolPackageFormat=snupkg
