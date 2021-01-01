@@ -52,7 +52,7 @@ jobs:
           VERSION='${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}'
           BUILD='${VERSION}.${{ github.run_number }}'
           echo "Configuration: ${CONFIGURATION}"
-          echo "Version: ${VERSION} (build ${BUILD})
+          echo "Version: ${VERSION} (build ${BUILD})"
           echo "Using suffix: ${SUFFIX}"
           echo ::set-output name=isdebug::${IS_DEBUG}
           echo ::set-output name=configuration::${CONFIGURATION}
