@@ -14,11 +14,9 @@ env:
   GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}   # set this to access token to github.com
   GITHUB_API_KEY: ${{ github.token }}                       # set this to access token to github.com
   NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}               # set this to access token to nuget.org
-  CONFIGURATION: Debug
   VERSION_MAJOR: 0
   VERSION_MINOR: 1
   VERSION_PATCH: 2
-  SUFFIX: ''
   
 jobs:
   build:
@@ -26,32 +24,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Initialize workflow variables
-      id: vars
-      shell: bash
-      run: |
-          unset IS_DEBUG
-          echo ${{ github.ref }}
-          if [ "${{ github.ref }}" == "refs/heads/master" ]; then echo "It is MASTER" ; else echo "It is not MASTER"; fi
-    
-    - name: Get Time
+    - name: Starting ...
       id: time
       uses: nanzm/get-time-action@v1.1
       with:
         format: 'YYYYMMDDHHmmss'
-      
-    - name: Usage
-      id: suffix
-      env:
-        TIME: "${{ steps.time.outputs.time }}"
+
+    - name: Initialize variables
+      id: vars
+      shell: bash
       run: |
-        echo $TIME
+          unset IS_DEBUG
+          unset CONFIGURATION
+          unset SUFFIX
+          unset VERSION
+          echo Branch: ${{ github.ref }}
+          if [ "${{ github.ref }}" == "refs/heads/master" ]; then 
+            IS_DEBUG='false' ;
+            CONFIGURATION='Release';
+            SUFFIX=''; 
+          else 
+            IS_DEBUG='true'; 
+            CONFIGURATION='Debug';
+            SUFFIX='alpha${{ steps.time.outputs.time }}'
+          fi
+          VERSION = "${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}"
+          BUILD = "$VERSION.${{ github.run_number }}"
+          echo "Configuration: $CONFIGURATION"
+          echo "Version: $VERSION (build $BUILD)
+          echo "Using suffix: $SUFFIX"
+          echo ::set-output name=isdebug::${IS_DEBUG}
+          echo ::set-output name=configuration::${CONFIGURATION}
+          echo ::set-output name=suffix::${SUFFIX}
+          echo ::set-output name=version::${VERSION}
+          echo ::set-output name=build::${BUILD}
         
     - name: Checkout code
       uses: actions/checkout@v2
-    
-    - name: Print new build number
-      run: echo "Build number is ${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ github.run_number }}"
     
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
@@ -62,17 +71,16 @@ jobs:
       run: dotnet restore
       
     - name: Build
-      if: github.ref != 'refs/heads/master'
       run: dotnet build 
-        --configuration ${{ env.CONFIGURATION }} 
+        --configuration ${{ steps.vars.outputs.configuration }} 
         --no-restore
-        -property:AssemblyVersion=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}.${{ github.run_number }}
-        -property:VersionPrefix=${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}
-        -property:VersionSuffix=alpha${{ steps.time.outputs.time }}
+        -property:AssemblyVersion=${{ steps.vars.outputs.build }}
+        -property:VersionPrefix=${{ steps.vars.outputs.version }}
+        -property:VersionSuffix=${{ steps.vars.outputs.suffix }}
        
 
     - name: Pack
-      run: dotnet pack --output nuget-packages --configuration ${{ env.CONFIGURATION }} --include-symbols -p:SymbolPackageFormat=snupkg
+      run: dotnet pack --output nuget-packages --configuration ${{ steps.vars.outputs.configuration }} --include-symbols -p:SymbolPackageFormat=snupkg
       
     - name: Add NuGet sources
       run: |
