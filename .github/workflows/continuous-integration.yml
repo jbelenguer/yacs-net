@@ -31,6 +31,7 @@ jobs:
       shell: bash
       run: |
           unset IS_DEBUG
+          echo ${{ github.ref }}
           if [${{ github.ref }} == 'refs/heads/master']; then echo "It is MASTER" ; fi
     
     - name: Get Time
