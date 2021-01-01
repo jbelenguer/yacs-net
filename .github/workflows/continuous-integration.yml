@@ -49,8 +49,8 @@ jobs:
             CONFIGURATION='Debug';
             SUFFIX='alpha${{ steps.time.outputs.time }}'
           fi
-          VERSION = '${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}'
-          BUILD = '${VERSION}.${{ github.run_number }}'
+          VERSION='${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${{ env.VERSION_PATCH }}'
+          BUILD='${VERSION}.${{ github.run_number }}'
           echo "Configuration: ${CONFIGURATION}"
           echo "Version: ${VERSION} (build ${BUILD})
           echo "Using suffix: ${SUFFIX}"
