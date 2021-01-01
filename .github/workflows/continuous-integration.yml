@@ -32,7 +32,7 @@ jobs:
       run: |
           unset IS_DEBUG
           echo ${{ github.ref }}
-          if [${{ github.ref }} == "refs/heads/master"]; then echo "It is MASTER" ; else echo "It is not MASTER"; fi
+          if ["${{ github.ref }}" == "refs/heads/master"]; then echo "It is MASTER" ; else echo "It is not MASTER"; fi
     
     - name: Get Time
       id: time
