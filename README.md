@@ -1,5 +1,7 @@
-# YACS.NET
 ![yacs icon](https://github.com/jbelenguer/yacs-net/blob/master/yacs_64.png)
+
+# YACS.NET
+
 Yet another communication system for .NET
 
 ## Motivation
@@ -33,7 +35,7 @@ _myServer.MessageReceived += MyServer_MessageReceived;
 
 Every event will identify the client who triggerede it with their end point, so it is easy to implement a reply with something like:
 ```cs
-private static void MyServer_MessageReceived(object sender, SimpleSocket.Events.MessageReceivedEventArgs e)
+private static void MyServer_MessageReceived(object sender, MessageReceivedEventArgs e)
 {
     _myServer.Send(e.EndPoint, "Ok, copy!");
 }
