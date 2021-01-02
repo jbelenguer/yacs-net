@@ -27,11 +27,11 @@ namespace Yacs
         /// <summary>
         /// Gets the end point for this channel.
         /// </summary>
-        public string RemoteEndPoint { get; private set; }
+        public ChannelIdentifier RemoteEndPoint { get; private set; }
 
         internal Channel(TcpClient tcpClient, ChannelOptions options)
         {
-            RemoteEndPoint = tcpClient.Client.RemoteEndPoint.ToString();
+            RemoteEndPoint = new ChannelIdentifier(tcpClient.Client.RemoteEndPoint);
             _options = options;
             _tcpClient = tcpClient;
             _messageReceptionTask = Task.Run(ReceptionLoop, _source.Token);

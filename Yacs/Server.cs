@@ -22,7 +22,7 @@ namespace Yacs
 
         private readonly int _port;
         private readonly TcpListener _tcpServer;
-        private readonly Dictionary<string, Channel> _knownClients;
+        private readonly Dictionary<ChannelIdentifier, Channel> _knownClients;
         private readonly CancellationTokenSource _discoveryCancellationSource;
         private readonly CancellationTokenSource _newClientsCancellationSource;
         private readonly ChannelOptions _newChannelOptions;
@@ -75,7 +75,7 @@ namespace Yacs
                 ?? new ServerOptions();
 
             _tcpServer = new TcpListener(IPAddress.Loopback, port);
-            _knownClients = new Dictionary<string, Channel>();
+            _knownClients = new Dictionary<ChannelIdentifier, Channel>();
             _discoveryCancellationSource = new CancellationTokenSource();
             _newClientsCancellationSource = new CancellationTokenSource();
 
@@ -101,9 +101,9 @@ namespace Yacs
         /// <summary>
         /// Sends data to a specific <see cref="Channel"/>.
         /// </summary>
-        /// <param name="destination"><see cref="Channel"/> end point.</param>
+        /// <param name="destination"><see cref="Channel"/> identifier.</param>
         /// <param name="message">Message to send.</param>
-        public void Send(string destination, string message)
+        public void Send(ChannelIdentifier destination, string message)
         {
             bool errored = false;
             lock (_channelsLock)
@@ -128,7 +128,7 @@ namespace Yacs
         /// </summary>
         /// <param name="channel"></param>
         /// <returns></returns>
-        public bool IsChannelOnline(string channel)
+        public bool IsChannelOnline(ChannelIdentifier channel)
         {
             lock (_channelsLock)
             {
@@ -139,8 +139,8 @@ namespace Yacs
         /// <summary>
         /// Disconnects a specific <see cref="Channel"/>.
         /// </summary>
-        /// <param name="channel"></param>
-        public void Disconnect(string channel)
+        /// <param name="channel">Identifier of the <see cref="Channel"/> to disconnect.</param>
+        public void Disconnect(ChannelIdentifier channel)
         {
             bool errored = false;
             lock (_channelsLock)
@@ -293,12 +293,12 @@ namespace Yacs
                                 }
                                 else
                                 {
-                                    _knownClients.Add(tcpClient.Client.RemoteEndPoint.ToString(), newChannel);
+                                    _knownClients.Add(new ChannelIdentifier(tcpClient.Client.RemoteEndPoint), newChannel);
                                 }
                             }
                             else
                             {
-                                var connectionLostEventArgs = new ConnectionLostEventArgs(tcpClient.Client.RemoteEndPoint.ToString(), "Connection refused. The number of active connections has reached the limit.");
+                                var connectionLostEventArgs = new ConnectionLostEventArgs(new ChannelIdentifier(tcpClient.Client.RemoteEndPoint), "Connection refused. The number of active connections has reached the limit.");
                                 tcpClient.Close();
                                 OnConnectionLost(connectionLostEventArgs);
                             }
