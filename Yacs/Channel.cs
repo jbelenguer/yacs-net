@@ -27,11 +27,11 @@ namespace Yacs
         /// <summary>
         /// Gets the end point for this channel.
         /// </summary>
-        public EndPoint RemoteEndPoint { get; private set; }
+        public string RemoteEndPoint { get; private set; }
 
         internal Channel(TcpClient tcpClient, ChannelOptions options)
         {
-            RemoteEndPoint = tcpClient.Client.RemoteEndPoint;
+            RemoteEndPoint = tcpClient.Client.RemoteEndPoint.ToString();
             _options = options;
             _tcpClient = tcpClient;
             _messageReceptionTask = Task.Run(ReceptionLoop, _source.Token);
@@ -149,7 +149,6 @@ namespace Yacs
                     _source?.Cancel();
                     _tcpClient?.Close();
                     _source?.Dispose();
-                    _messageReceptionTask.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer

@@ -11,7 +11,7 @@ namespace Yacs.Events
         /// <summary>
         /// Gets the disconnected client's end point.
         /// </summary>
-        public EndPoint EndPoint { get; private set; }
+        public string EndPoint { get; private set; }
         /// <summary>
         /// Gets a message.
         /// </summary>
@@ -21,13 +21,13 @@ namespace Yacs.Events
         /// </summary>
         public Exception Exception { get; private set; }
         
-        internal ConnectionLostEventArgs(EndPoint remoteEndPoint, string additionalInfo = null)
+        internal ConnectionLostEventArgs(string remoteEndPoint, string additionalInfo = null)
         {
             EndPoint = remoteEndPoint;
             AdditionalInfo = additionalInfo;
         }
 
-        internal ConnectionLostEventArgs(EndPoint remoteEndPoint, Exception ex)
+        internal ConnectionLostEventArgs(string remoteEndPoint, Exception ex)
         {
             EndPoint = remoteEndPoint;
             AdditionalInfo = ex.Message;

@@ -22,7 +22,7 @@ namespace Yacs
 
         private readonly int _port;
         private readonly TcpListener _tcpServer;
-        private readonly Dictionary<EndPoint, Channel> _knownClients;
+        private readonly Dictionary<string, Channel> _knownClients;
         private readonly CancellationTokenSource _discoveryCancellationSource;
         private readonly CancellationTokenSource _newClientsCancellationSource;
         private readonly ChannelOptions _newChannelOptions;
@@ -75,7 +75,7 @@ namespace Yacs
                 ?? new ServerOptions();
 
             _tcpServer = new TcpListener(IPAddress.Loopback, port);
-            _knownClients = new Dictionary<EndPoint, Channel>();
+            _knownClients = new Dictionary<string, Channel>();
             _discoveryCancellationSource = new CancellationTokenSource();
             _newClientsCancellationSource = new CancellationTokenSource();
 
@@ -103,7 +103,7 @@ namespace Yacs
         /// </summary>
         /// <param name="destination"><see cref="Channel"/> end point.</param>
         /// <param name="message">Message to send.</param>
-        public void Send(EndPoint destination, string message)
+        public void Send(string destination, string message)
         {
             bool errored = false;
             lock (_channelsLock)
@@ -128,7 +128,7 @@ namespace Yacs
         /// </summary>
         /// <param name="channel"></param>
         /// <returns></returns>
-        public bool IsChannelOnline(EndPoint channel)
+        public bool IsChannelOnline(string channel)
         {
             lock (_channelsLock)
             {
@@ -140,7 +140,7 @@ namespace Yacs
         /// Disconnects a specific <see cref="Channel"/>.
         /// </summary>
         /// <param name="channel"></param>
-        public void Disconnect(EndPoint channel)
+        public void Disconnect(string channel)
         {
             bool errored = false;
             lock (_channelsLock)
@@ -213,8 +213,6 @@ namespace Yacs
                         client.Dispose();
                     }
                     _discoveryAgent.Dispose();
-                    _discoveryTask.Dispose();
-                    _newConnectionsTask.Dispose();
                     _tcpServer.Stop();
                 }
 
@@ -278,11 +276,12 @@ namespace Yacs
 
                     if (_enabled)
                     {
-                        var newChannel = new Channel(tcpClient, _newChannelOptions);
+                        Channel newChannel = null;
                         lock (_channelsLock)
                         {
                             if (_options.MaximumChannels > 0 && _knownClients.Count < _options.MaximumChannels)
                             {
+                                newChannel = new Channel(tcpClient, _newChannelOptions);
                                 newChannel.ConnectionLost += Channel_ConnectionLost;
                                 newChannel.MessageReceived += Channel_MessageReceived;
                                 newChannel.ChannelError += Channel_Error;
@@ -294,13 +293,21 @@ namespace Yacs
                                 }
                                 else
                                 {
-                                    _knownClients.Add(tcpClient.Client.RemoteEndPoint, newChannel);
+                                    _knownClients.Add(tcpClient.Client.RemoteEndPoint.ToString(), newChannel);
                                 }
                             }
+                            else
+                            {
+                                var connectionLostEventArgs = new ConnectionLostEventArgs(tcpClient.Client.RemoteEndPoint.ToString(), "Connection refused. The number of active connections has reached the limit.");
+                                tcpClient.Close();
+                                OnConnectionLost(connectionLostEventArgs);
+                            }
                         }
-
-                        var connectionReceivedEventArgs = new ConnectionReceivedEventArgs(newChannel.RemoteEndPoint);
-                        OnConnectionReceived(connectionReceivedEventArgs);
+                        if (newChannel != null)
+                        {
+                            var connectionReceivedEventArgs = new ConnectionReceivedEventArgs(newChannel.RemoteEndPoint);
+                            OnConnectionReceived(connectionReceivedEventArgs);
+                        }
                     }
                     Task.Delay(DEFAULT_DELAY);
                 }
@@ -332,7 +339,7 @@ namespace Yacs
                             var response = DiscoveryMessage.CreateReply(_port);
                             _discoveryAgent.Send(response, response.Length, RemoteIpEndPoint);
 
-                            var discoveryRequestEventArgs = new DiscoveryRequestEventArgs(RemoteIpEndPoint);
+                            var discoveryRequestEventArgs = new DiscoveryRequestEventArgs(RemoteIpEndPoint.ToString());
                             OnDiscoveryRequestReceived(discoveryRequestEventArgs);
                         }
                     }
@@ -356,10 +363,7 @@ namespace Yacs
                 if (_knownClients.TryGetValue(e.EndPoint, out var channel))
                 {
                     channel.Dispose();
-                    lock (_channelsLock)
-                    {
-                        _knownClients.Remove(e.EndPoint);
-                    }
+                    _knownClients.Remove(e.EndPoint);
                 }
             }
             OnConnectionLost(e);
