@@ -82,7 +82,8 @@ namespace Yacs
             _newChannelOptions = new ChannelOptions
             {
                 Encoder = _options.Encoder,
-                ReceptionBufferSize = _options.ReceptionBufferSize
+                ReceptionBufferSize = _options.ReceptionBufferSize,
+                KeepAlive = _options.ActiveChannelMonitoring
             };
 
             if (_options.IsDiscoverable)
@@ -179,7 +180,8 @@ namespace Yacs
         /// </summary>
         public event EventHandler<DiscoveryRequestEventArgs> DiscoveryRequestReceived;
         /// <summary>
-        /// Event triggered when a connection to a <see cref="Channel"/> is lost.
+        /// Event triggered when a connection to a <see cref="Channel"/> is lost. NOTE: If you are really interested in monitoring channels, 
+        /// you may want to enable <see cref="ServerOptions.ActiveChannelMonitoring"/> in the <see cref="ServerOptions"/>
         /// </summary>
         public event EventHandler<ConnectionLostEventArgs> ConnectionLost;
         /// <summary>
