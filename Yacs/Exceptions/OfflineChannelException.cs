@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Net;
-using System.Runtime.Serialization;
 
 namespace Yacs.Exceptions
 {
@@ -13,13 +11,13 @@ namespace Yacs.Exceptions
         /// <summary>
         /// Gets the <see cref="EndPoint"/> that seems offline.
         /// </summary>
-        public string EndPoint { get; private set; }
+        public ChannelIdentifier EndPoint { get; private set; }
 
         /// <summary>
         /// Creates a new <see cref="OfflineChannelException"/>.
         /// </summary>
         /// <param name="remoteEndpoint"></param>
-        public OfflineChannelException(string remoteEndpoint) : base($"The endpoint {remoteEndpoint} is not registered as an online client.")
+        public OfflineChannelException(ChannelIdentifier remoteEndpoint) : base($"The endpoint {remoteEndpoint} is not registered as an online client.")
         {
             EndPoint = remoteEndpoint;
         }

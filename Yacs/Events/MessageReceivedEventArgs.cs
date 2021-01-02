@@ -13,13 +13,13 @@ namespace Yacs.Events
         /// <summary>
         /// Gets the client's end point.
         /// </summary>
-        public string EndPoint { get; private set; }
+        public ChannelIdentifier EndPoint { get; private set; }
         /// <summary>
         /// Gets the message received.
         /// </summary>
         public string Message { get; private set; }
         
-        internal MessageReceivedEventArgs(string remoteEndPoint, string message)
+        internal MessageReceivedEventArgs(ChannelIdentifier remoteEndPoint, string message)
         {
             EndPoint = remoteEndPoint;
             Message = message;

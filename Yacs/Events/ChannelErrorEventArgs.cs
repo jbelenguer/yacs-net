@@ -13,7 +13,7 @@ namespace Yacs.Events
         /// <summary>
         /// Gets the errored <see cref="Channel"/> end point.
         /// </summary>
-        public string EndPoint { get; private set; }
+        public ChannelIdentifier EndPoint { get; private set; }
         /// <summary>
         /// Gets a message.
         /// </summary>
@@ -23,7 +23,7 @@ namespace Yacs.Events
         /// </summary>
         public Exception Exception { get; private set; }
 
-        internal ChannelErrorEventArgs(string remoteEndPoint, Exception ex)
+        internal ChannelErrorEventArgs(ChannelIdentifier remoteEndPoint, Exception ex)
         {
             EndPoint = remoteEndPoint;
             AdditionalInfo = ex.Message;
