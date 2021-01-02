@@ -88,8 +88,8 @@ jobs:
     - name: NuGet push on GitHub
       run: dotnet nuget push "**/*.nupkg" --source github --api-key ${{ env.GITHUB_API_KEY }} --skip-duplicate
 
-    #- name: NuGet push on NuGet
-    #  run: dotnet nuget push "**/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+    - name: NuGet push on NuGet
+      run: dotnet nuget push "**/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
 
     - name: Upload NuGet package
       uses: actions/upload-artifact@v2.2.1
