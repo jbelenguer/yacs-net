@@ -1,6 +1,10 @@
 name: ContinuousIntegration
 
 on:
+  push:
+    branches: 
+      - master
+      - 'versions/**'
   pull_request:
     branches: 
       - master
