@@ -11,9 +11,9 @@ namespace Yacs.Events
         /// <summary>
         /// Gets the client's end point.
         /// </summary>
-        public IPEndPoint EndPoint { get; private set; }
+        public string EndPoint { get; private set; }
 
-        internal DiscoveryRequestEventArgs(IPEndPoint remoteEndPoint)
+        internal DiscoveryRequestEventArgs(string remoteEndPoint)
         {
             EndPoint = remoteEndPoint;
         }

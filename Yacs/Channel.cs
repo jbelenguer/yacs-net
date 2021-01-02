@@ -18,23 +18,21 @@ namespace Yacs
     {
         private const int DEFAULT_DELAY = 100;
 
-        private readonly int _messageBufferSize;
-        private readonly Encoding _encoder;
         private readonly TcpClient _tcpClient;
         private readonly CancellationTokenSource _source = new CancellationTokenSource();
         private readonly Task _messageReceptionTask;
+        private readonly ChannelOptions _options;
         private bool disposedValue;
 
         /// <summary>
         /// Gets the end point for this channel.
         /// </summary>
-        public EndPoint RemoteEndPoint { get; private set; }
+        public string RemoteEndPoint { get; private set; }
 
         internal Channel(TcpClient tcpClient, ChannelOptions options)
         {
-            RemoteEndPoint = tcpClient.Client.RemoteEndPoint;
-            _messageBufferSize = options.ReceptionBufferSize;
-            _encoder = options.Encoder;
+            RemoteEndPoint = tcpClient.Client.RemoteEndPoint.ToString();
+            _options = options;
             _tcpClient = tcpClient;
             _messageReceptionTask = Task.Run(ReceptionLoop, _source.Token);
         }
@@ -46,15 +44,9 @@ namespace Yacs
         /// <param name="port">TCP/UDP port number.</param>
         /// <param name="options"><see cref="ChannelOptions"/> to initialise the channel.</param>
         public Channel(string serverUrl, int port, ChannelOptions options = null) 
+            : this(new TcpClient(serverUrl, port), options ?? new ChannelOptions())
         {
-            if (options == null)
-            {
-                options = new ChannelOptions();
-            }
 
-            _messageBufferSize = options.ReceptionBufferSize;
-            _encoder = options.Encoder;
-            _tcpClient = new TcpClient(serverUrl, port);
         }
 
         /// <summary>
@@ -101,7 +93,7 @@ namespace Yacs
         {
             try
             {
-                var msg = _encoder.GetBytes(message);
+                var msg = _options.Encoder.GetBytes(message);
 
                 var stream = _tcpClient.GetStream();
                 stream.Write(msg, 0, msg.Length);
@@ -157,7 +149,6 @@ namespace Yacs
                     _source?.Cancel();
                     _tcpClient?.Close();
                     _source?.Dispose();
-                    _messageReceptionTask.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
@@ -199,14 +190,14 @@ namespace Yacs
             try
             {
                 // Buffer for reading data
-                byte[] bytes = new byte[_messageBufferSize];
+                byte[] bytes = new byte[_options.ReceptionBufferSize];
                 string payload = null;
                 int byteCount;
 
                 // Get a stream object for reading and writing
                 NetworkStream stream = _tcpClient.GetStream();
 
-                while (_tcpClient.Client.Poll(10000, SelectMode.SelectWrite))
+                while (true)
                 {
                     payload = null;
                     if (stream.DataAvailable)
@@ -218,14 +209,24 @@ namespace Yacs
                             // Loop to receive all the data sent by the client.
                             byteCount = stream.Read(bytes, 0, bytes.Length);
 
-                            payload = _encoder.GetString(bytes, 0, byteCount);
+                            payload = _options.Encoder.GetString(bytes, 0, byteCount);
                             message.Append(payload);
                         }
                         OnMessageReceived(new MessageReceivedEventArgs(RemoteEndPoint, message.ToString()));
                     }
+                    else if (_options.KeepAlive && _tcpClient.Client.Poll(0, SelectMode.SelectRead))
+                    {
+                        // If the poll returns true, it can be for 3 reasons:
+                        // - if Listen() has been called and a connection is pending (we know it is not the case here)
+                        // - if data is available for reading (we are going to check now)
+                        // - if the connection has been closed, reset, or terminated
+                    
+                        if (_tcpClient.Client.Available == 0)
+                            break;
+                    }
                     Thread.Sleep(DEFAULT_DELAY);
                 }
-                OnConnectionLost(new ConnectionLostEventArgs(RemoteEndPoint, $"Socket poll failed to {SelectMode.SelectRead:G}"));
+                OnConnectionLost(new ConnectionLostEventArgs(RemoteEndPoint, "Socket failed to poll, this suggests connection has been closed, reset or terminated"));
             }
             catch (Exception e)
             {

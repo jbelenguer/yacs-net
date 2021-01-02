@@ -13,13 +13,13 @@ namespace Yacs.Exceptions
         /// <summary>
         /// Gets the <see cref="EndPoint"/> that seems offline.
         /// </summary>
-        public EndPoint EndPoint { get; private set; }
+        public string EndPoint { get; private set; }
 
         /// <summary>
         /// Creates a new <see cref="OfflineChannelException"/>.
         /// </summary>
         /// <param name="remoteEndpoint"></param>
-        public OfflineChannelException(EndPoint remoteEndpoint) : base($"The endpoint {remoteEndpoint} is not registered as an online client.")
+        public OfflineChannelException(string remoteEndpoint) : base($"The endpoint {remoteEndpoint} is not registered as an online client.")
         {
             EndPoint = remoteEndpoint;
         }

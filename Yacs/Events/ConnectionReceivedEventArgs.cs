@@ -11,9 +11,9 @@ namespace Yacs.Events
         /// <summary>
         /// Gets the new client's end point.
         /// </summary>
-        public EndPoint EndPoint { get; private set; }
+        public string EndPoint { get; private set; }
 
-        internal ConnectionReceivedEventArgs(EndPoint remoteEndPoint)
+        internal ConnectionReceivedEventArgs(string remoteEndPoint)
         {
             EndPoint = remoteEndPoint;
         }
