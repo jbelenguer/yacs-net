@@ -279,7 +279,7 @@ namespace Yacs
                         Channel newChannel = null;
                         lock (_channelsLock)
                         {
-                            if (_options.MaximumChannels > 0 && _knownClients.Count < _options.MaximumChannels)
+                            if (_options.MaximumChannels == 0 || _knownClients.Count < _options.MaximumChannels)
                             {
                                 newChannel = new Channel(tcpClient, _newChannelOptions);
                                 newChannel.ConnectionLost += Channel_ConnectionLost;
