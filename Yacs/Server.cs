@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -12,10 +11,8 @@ using Yacs.Options;
 
 namespace Yacs
 {
-    /// <summary>
-    /// Represents a Yacs server. A server is able to accept many connections from many channels.
-    /// </summary>
-    public class Server : IDisposable
+    /// <inheritdoc cref="IServer" />
+    public class Server : IServer, IDisposable
     {
         private const int DEFAULT_DELAY = 250;
         private readonly object _channelsLock = new object();
@@ -30,48 +27,41 @@ namespace Yacs
 
         private readonly Task _newConnectionsTask;
 
-        private Task _discoveryTask;
-        private UdpClient _discoveryAgent;
+        private readonly Task _discoveryTask;
+        private readonly UdpClient _discoveryAgent;
 
         private bool disposedValue;
         private bool _enabled = false;
 
-        /// <summary>
-        /// Enables or disables the new connections. If the <see cref="Server"/> is discoverable, the flag also affects the discovery feature. 
-        /// NOTE: This means that if you re-enable the <see cref="Server"/>, it would re-enable the discovery, no matter what its value was before. 
-        /// </summary>
-        public bool Enabled
+        /// <inheritdoc />
+        public bool IsEnabled
         {
             get { return _enabled; }
-            set 
+            set
             {
                 _enabled = value;
-                DiscoveryEnabled = _enabled && _options.IsDiscoverable;
+                IsDiscoveryEnabled = _enabled && _options.IsDiscoverable;
             }
         }
 
-        /// <summary>
-        /// If the feature was enabled on creation, this flag enables or disables the discovery.
-        /// </summary>
-        public bool DiscoveryEnabled { get; set; }
+        /// <inheritdoc />
+        public bool IsDiscoveryEnabled { get; set; }
 
-        /// <summary>
-        /// Gets the number of channels online.
-        /// </summary>
+        /// <inheritdoc />
         public int ChannelCount
         {
             get { lock (_channelsLock) { return _knownClients.Count; } }
         }
 
         /// <summary>
-        /// Creates a new Yacs <see cref="Server"/>. Then it can accept connections from many <see cref="Channel"/>.
+        /// Creates a new Yacs <see cref="Server"/>. This can accept connections from many <see cref="Channel"/> instances.
         /// </summary>
-        /// <param name="port">Port in which it will be listening to.</param>
-        /// <param name="options">Server options.</param>
+        /// <param name="port">The port on which the server will be listening.</param>
+        /// <param name="options">The server options.</param>
         public Server(int port, ServerOptions options = null)
         {
             _port = port;
-            _options = options 
+            _options = options
                 ?? new ServerOptions();
 
             _tcpServer = new TcpListener(IPAddress.Loopback, port);
@@ -88,7 +78,7 @@ namespace Yacs
 
             if (_options.IsDiscoverable)
             {
-                DiscoveryEnabled = true;
+                IsDiscoveryEnabled = true;
                 _discoveryAgent = new UdpClient(_options.DiscoveryPort);
                 _discoveryTask = Task.Run(DiscoveryLoop, _discoveryCancellationSource.Token);
             }
@@ -98,11 +88,7 @@ namespace Yacs
             _newConnectionsTask = Task.Run(NewConnectionListenerLoop, _newClientsCancellationSource.Token);
         }
 
-        /// <summary>
-        /// Sends data to a specific <see cref="Channel"/>.
-        /// </summary>
-        /// <param name="destination"><see cref="Channel"/> identifier.</param>
-        /// <param name="message">Message to send.</param>
+        /// <inheritdoc />
         public void Send(ChannelIdentifier destination, string message)
         {
             bool errored = false;
@@ -123,11 +109,7 @@ namespace Yacs
             }
         }
 
-        /// <summary>
-        /// Gets if a specific <see cref="Channel"/> is online.
-        /// </summary>
-        /// <param name="channel"></param>
-        /// <returns></returns>
+        /// <inheritdoc />
         public bool IsChannelOnline(ChannelIdentifier channel)
         {
             lock (_channelsLock)
@@ -136,10 +118,7 @@ namespace Yacs
             }
         }
 
-        /// <summary>
-        /// Disconnects a specific <see cref="Channel"/>.
-        /// </summary>
-        /// <param name="channel">Identifier of the <see cref="Channel"/> to disconnect.</param>
+        /// <inheritdoc />
         public void Disconnect(ChannelIdentifier channel)
         {
             bool errored = false;
@@ -155,12 +134,27 @@ namespace Yacs
                 }
                 _knownClients.Remove(channel);
             }
-            
+
             if (errored)
             {
                 OnError(new ChannelErrorEventArgs(channel, new OfflineChannelException(channel)));
             }
         }
+
+        /// <inheritdoc />
+        public event EventHandler<ConnectionReceivedEventArgs> ConnectionReceived;
+
+        /// <inheritdoc />
+        public event EventHandler<DiscoveryRequestEventArgs> DiscoveryRequestReceived;
+
+        /// <inheritdoc />
+        public event EventHandler<ConnectionLostEventArgs> ConnectionLost;
+
+        /// <inheritdoc />
+        public event EventHandler<MessageReceivedEventArgs> MessageReceived;
+
+        /// <inheritdoc />
+        public event EventHandler<ChannelErrorEventArgs> ChannelError;
 
         /// <summary>
         /// Stops the <see cref="Server"/> in an ordered manner, releasing all the resources used by it.
@@ -172,29 +166,7 @@ namespace Yacs
         }
 
         /// <summary>
-        /// Event triggered when a <see cref="Channel"/> starts a connection to the <see cref="Server"/>.
-        /// </summary>
-        public event EventHandler<ConnectionReceivedEventArgs> ConnectionReceived;
-        /// <summary>
-        /// Event triggered when a discovery request is received from a <see cref="Channel"/>.
-        /// </summary>
-        public event EventHandler<DiscoveryRequestEventArgs> DiscoveryRequestReceived;
-        /// <summary>
-        /// Event triggered when a connection to a <see cref="Channel"/> is lost. NOTE: If you are really interested in monitoring channels, 
-        /// you may want to enable <see cref="ServerOptions.ActiveChannelMonitoring"/> in the <see cref="ServerOptions"/>
-        /// </summary>
-        public event EventHandler<ConnectionLostEventArgs> ConnectionLost;
-        /// <summary>
-        /// Event triggered when a message is received from a <see cref="Channel"/>.
-        /// </summary>
-        public event EventHandler<MessageReceivedEventArgs> MessageReceived;
-        /// <summary>
-        /// Event triggered when a <see cref="Channel"/> throws an error.
-        /// </summary>
-        public event EventHandler<ChannelErrorEventArgs> ChannelError;
-
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// Stops the <see cref="Server"/> in an ordered manner, releasing all the resources used by it.
         /// </summary>
         /// <param name="disposing"></param>
         protected virtual void Dispose(bool disposing)
@@ -204,7 +176,7 @@ namespace Yacs
                 if (disposing)
                 {
                     _enabled = false;
-                    DiscoveryEnabled = false;
+                    IsDiscoveryEnabled = false;
                     _discoveryCancellationSource?.Cancel();
                     _newClientsCancellationSource?.Cancel();
                     _discoveryAgent.Close();
@@ -286,10 +258,10 @@ namespace Yacs
                                 newChannel.MessageReceived += Channel_MessageReceived;
                                 newChannel.ChannelError += Channel_Error;
 
-                                if (_knownClients.ContainsKey(newChannel.RemoteEndPoint))
+                                if (_knownClients.ContainsKey(newChannel.Identifier))
                                 {
-                                    _knownClients[newChannel.RemoteEndPoint].Dispose();
-                                    _knownClients[newChannel.RemoteEndPoint] = newChannel;
+                                    _knownClients[newChannel.Identifier].Dispose();
+                                    _knownClients[newChannel.Identifier] = newChannel;
                                 }
                                 else
                                 {
@@ -305,7 +277,7 @@ namespace Yacs
                         }
                         if (newChannel != null)
                         {
-                            var connectionReceivedEventArgs = new ConnectionReceivedEventArgs(newChannel.RemoteEndPoint);
+                            var connectionReceivedEventArgs = new ConnectionReceivedEventArgs(newChannel.Identifier);
                             OnConnectionReceived(connectionReceivedEventArgs);
                         }
                     }
@@ -334,7 +306,7 @@ namespace Yacs
                         // Blocks until a message returns on this socket from a remote host.
                         byte[] discoveryRequest = _discoveryAgent.Receive(ref RemoteIpEndPoint);
 
-                        if (DiscoveryEnabled && DiscoveryMessage.IsValidRequest(discoveryRequest))
+                        if (IsDiscoveryEnabled && DiscoveryMessage.IsValidRequest(discoveryRequest))
                         {
                             var response = DiscoveryMessage.CreateReply(_port);
                             _discoveryAgent.Send(response, response.Length, RemoteIpEndPoint);
@@ -378,6 +350,6 @@ namespace Yacs
         {
             OnError(e);
         }
-        
+
     }
 }

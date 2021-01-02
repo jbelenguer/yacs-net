@@ -11,10 +11,8 @@ using Yacs.Options;
 
 namespace Yacs
 {
-    /// <summary>
-    /// Represents a communication channel.
-    /// </summary>
-    public class Channel : IDisposable
+    /// <inheritdoc cref="IChannel" />
+    public class Channel : IChannel, IDisposable
     {
         private const int DEFAULT_DELAY = 100;
 
@@ -24,36 +22,34 @@ namespace Yacs
         private readonly ChannelOptions _options;
         private bool disposedValue;
 
-        /// <summary>
-        /// Gets the end point for this channel.
-        /// </summary>
-        public ChannelIdentifier RemoteEndPoint { get; private set; }
+        /// <inheritdoc/>
+        public ChannelIdentifier Identifier { get; private set; }
 
         internal Channel(TcpClient tcpClient, ChannelOptions options)
         {
-            RemoteEndPoint = new ChannelIdentifier(tcpClient.Client.RemoteEndPoint);
+            Identifier = new ChannelIdentifier(tcpClient.Client.RemoteEndPoint);
             _options = options;
             _tcpClient = tcpClient;
             _messageReceptionTask = Task.Run(ReceptionLoop, _source.Token);
         }
 
         /// <summary>
-        /// Creates a new communication channel for a client. 
+        /// Creates a new Yacs communication channel for a client.
         /// </summary>
-        /// <param name="serverUrl">Url to connect to.</param>
-        /// <param name="port">TCP/UDP port number.</param>
-        /// <param name="options"><see cref="ChannelOptions"/> to initialise the channel.</param>
-        public Channel(string serverUrl, int port, ChannelOptions options = null) 
-            : this(new TcpClient(serverUrl, port), options ?? new ChannelOptions())
+        /// <param name="host">The host to connect to.</param>
+        /// <param name="port">The TCP port number to connect to.</param>
+        /// <param name="options">The <see cref="ChannelOptions"/> to use to initialise the channel.</param>
+        public Channel(string host, int port, ChannelOptions options = null)
+            : this(new TcpClient(host, port), options ?? new ChannelOptions())
         {
 
         }
 
         /// <summary>
-        /// Broadcasts a discover packet to the entire network, using the specified port. Returns the 
+        /// Broadcasts a discovery packet to the entire network, using the specified port.
         /// </summary>
-        /// <param name="broadcastPort">Port number to braodcast from.</param>
-        /// <param name="timeout">Time to wait for an answer in milliseconds.</param>
+        /// <param name="broadcastPort">The port number to broadcast to.</param>
+        /// <param name="timeout">The maximum time to wait for an answer in milliseconds.</param>
         public static async Task<IPEndPoint> Discover(int broadcastPort, int timeout = 10000)
         {
             try
@@ -79,16 +75,13 @@ namespace Yacs
                     return new IPEndPoint(IPAddress.None, 0);
                 }
             }
-            catch(Exception)
+            catch (Exception)
             {
                 return new IPEndPoint(IPAddress.None, 0);
             }
         }
 
-        /// <summary>
-        /// Sends a message in the channel.
-        /// </summary>
-        /// <param name="message"></param>
+        /// <inheritdoc />
         public void Send(string message)
         {
             try
@@ -100,20 +93,29 @@ namespace Yacs
             }
             catch (IOException e)
             {
-                OnError(new ChannelErrorEventArgs(RemoteEndPoint, e));
+                OnError(new ChannelErrorEventArgs(Identifier, e));
             }
             catch (SocketException e)
             {
-                OnError(new ChannelErrorEventArgs(RemoteEndPoint, e));
+                OnError(new ChannelErrorEventArgs(Identifier, e));
             }
             catch (ObjectDisposedException e)
             {
-                OnConnectionLost(new ConnectionLostEventArgs(RemoteEndPoint, e));
+                OnConnectionLost(new ConnectionLostEventArgs(Identifier, e));
             }
         }
 
+        /// <inheritdoc />
+        public event EventHandler<MessageReceivedEventArgs> MessageReceived;
+
+        /// <inheritdoc />
+        public event EventHandler<ConnectionLostEventArgs> ConnectionLost;
+
+        /// <inheritdoc />
+        public event EventHandler<ChannelErrorEventArgs> ChannelError;
+
         /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// Disposes the communication channel and releases all resources used by it.
         /// </summary>
         public void Dispose()
         {
@@ -122,22 +124,7 @@ namespace Yacs
         }
 
         /// <summary>
-        /// Event triggered to indicate there is a new message.
-        /// </summary>
-        public event EventHandler<MessageReceivedEventArgs> MessageReceived;
-
-        /// <summary>
-        /// Event triggered indicating a <see cref="Channel"/> connection lost.
-        /// </summary>
-        public event EventHandler<ConnectionLostEventArgs> ConnectionLost;
-
-        /// <summary>
-        /// Event triggered indicating an error.
-        /// </summary>
-        public event EventHandler<ChannelErrorEventArgs> ChannelError;
-
-        /// <summary>
-        /// 
+        /// Disposes the communication channel and releases all resources used by it.
         /// </summary>
         /// <param name="disposing"></param>
         protected virtual void Dispose(bool disposing)
@@ -183,7 +170,7 @@ namespace Yacs
         {
             ChannelError?.Invoke(this, e);
         }
-        
+
 
         private void ReceptionLoop()
         {
@@ -212,7 +199,7 @@ namespace Yacs
                             payload = _options.Encoder.GetString(bytes, 0, byteCount);
                             message.Append(payload);
                         }
-                        OnMessageReceived(new MessageReceivedEventArgs(RemoteEndPoint, message.ToString()));
+                        OnMessageReceived(new MessageReceivedEventArgs(Identifier, message.ToString()));
                     }
                     else if (_options.KeepAlive && _tcpClient.Client.Poll(0, SelectMode.SelectRead))
                     {
@@ -220,17 +207,17 @@ namespace Yacs
                         // - if Listen() has been called and a connection is pending (we know it is not the case here)
                         // - if data is available for reading (we are going to check now)
                         // - if the connection has been closed, reset, or terminated
-                    
+
                         if (_tcpClient.Client.Available == 0)
                             break;
                     }
                     Thread.Sleep(DEFAULT_DELAY);
                 }
-                OnConnectionLost(new ConnectionLostEventArgs(RemoteEndPoint, "Socket failed to poll, this suggests connection has been closed, reset or terminated"));
+                OnConnectionLost(new ConnectionLostEventArgs(Identifier, "Socket failed to poll, this suggests connection has been closed, reset or terminated"));
             }
             catch (Exception e)
             {
-                OnConnectionLost(new ConnectionLostEventArgs(RemoteEndPoint, e));
+                OnConnectionLost(new ConnectionLostEventArgs(Identifier, e));
             }
         }
     }
