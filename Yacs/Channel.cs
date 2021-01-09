@@ -20,6 +20,7 @@ namespace Yacs
         private readonly CancellationTokenSource _source = new CancellationTokenSource();
         private readonly Task _messageReceptionTask;
         private readonly ChannelOptions _options;
+        private readonly Decoder _decoder;
         private bool disposedValue;
 
         /// <inheritdoc/>
@@ -29,6 +30,7 @@ namespace Yacs
         {
             Identifier = new ChannelIdentifier(tcpClient.Client.RemoteEndPoint);
             _options = options;
+            _decoder = _options.Encoder.GetDecoder();
             _tcpClient = tcpClient;
             _messageReceptionTask = Task.Run(ReceptionLoop, _source.Token);
         }
@@ -84,6 +86,12 @@ namespace Yacs
         /// <inheritdoc />
         public void Send(string message)
         {
+            if (string.IsNullOrEmpty(message))
+                return;
+            if (_options.Encoder == null)
+            {
+                throw new InvalidOperationException($"The channel has no configured encoder, so only bytes can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoder)} for more information.");
+            }
             try
             {
                 var msg = _options.Encoder.GetBytes(message);
@@ -91,22 +99,45 @@ namespace Yacs
                 var stream = _tcpClient.GetStream();
                 stream.Write(msg, 0, msg.Length);
             }
-            catch (IOException e)
+            catch (ObjectDisposedException e)
+            {
+                OnConnectionLost(new ConnectionLostEventArgs(Identifier, e));
+            }
+            catch (Exception e)
             {
                 OnError(new ChannelErrorEventArgs(Identifier, e));
             }
-            catch (SocketException e)
+        }
+
+        /// <inheritdoc />
+        public void Send(byte[] message)
+        {
+            if (message == null || message.Length == 0)
+                return;
+            if (_options.Encoder != null)
             {
-                OnError(new ChannelErrorEventArgs(Identifier, e));
+                throw new InvalidOperationException($"The channel has a configured encoder, so only strings can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoder)} for more information.");
+            }
+            try
+            {
+                var stream = _tcpClient.GetStream();
+                stream.Write(message, 0, message.Length);
             }
             catch (ObjectDisposedException e)
             {
                 OnConnectionLost(new ConnectionLostEventArgs(Identifier, e));
             }
+            catch (Exception e)
+            {
+                OnError(new ChannelErrorEventArgs(Identifier, e));
+            }
         }
 
         /// <inheritdoc />
-        public event EventHandler<MessageReceivedEventArgs> MessageReceived;
+        public event EventHandler<StringMessageReceivedEventArgs> StringMessageReceived;
+
+        /// <inheritdoc />
+        public event EventHandler<ByteMessageReceivedEventArgs> ByteMessageReceived;
 
         /// <inheritdoc />
         public event EventHandler<ConnectionLostEventArgs> ConnectionLost;
@@ -145,12 +176,21 @@ namespace Yacs
         }
 
         /// <summary>
-        /// Triggers a <see cref="MessageReceived"/> event.
+        /// Triggers a <see cref="StringMessageReceived"/> event.
         /// </summary>
         /// <param name="e">Event arguments.</param>
-        protected virtual void OnMessageReceived(MessageReceivedEventArgs e)
+        protected virtual void OnStringMessageReceived(StringMessageReceivedEventArgs e)
         {
-            MessageReceived?.Invoke(this, e);
+            StringMessageReceived?.Invoke(this, e);
+        }
+
+        /// <summary>
+        /// Triggers a <see cref="ByteMessageReceived"/> event.
+        /// </summary>
+        /// <param name="e">Event arguments.</param>
+        protected virtual void OnByteMessageReceived(ByteMessageReceivedEventArgs e)
+        {
+            ByteMessageReceived?.Invoke(this, e);
         }
 
         /// <summary>
@@ -177,29 +217,47 @@ namespace Yacs
             try
             {
                 // Buffer for reading data
-                byte[] bytes = new byte[_options.ReceptionBufferSize];
-                string payload = null;
-                int byteCount;
+                byte[] buffer = new byte[_options.ReceptionBufferSize];
+                int bytesRead;
 
                 // Get a stream object for reading and writing
                 NetworkStream stream = _tcpClient.GetStream();
 
                 while (true)
                 {
-                    payload = null;
                     if (stream.DataAvailable)
                     {
-                        StringBuilder message = new StringBuilder();
+                        int offset = 0;
 
+                        // Loop to receive all the data sent by the client.
                         while (stream.DataAvailable)
                         {
-                            // Loop to receive all the data sent by the client.
-                            byteCount = stream.Read(bytes, 0, bytes.Length);
-
-                            payload = _options.Encoder.GetString(bytes, 0, byteCount);
-                            message.Append(payload);
+                            bytesRead = stream.Read(buffer, offset, buffer.Length-offset);
+                            offset += bytesRead;
+                            if (offset >= buffer.Length)
+                            {
+                                break;
+                            }
                         }
-                        OnMessageReceived(new MessageReceivedEventArgs(Identifier, message.ToString()));
+                        if (_options.Encoder == null)
+                        {
+                            var byteMessage = new byte[offset];
+                            Array.Copy(buffer, byteMessage, offset);
+                            OnByteMessageReceived(new ByteMessageReceivedEventArgs(Identifier, byteMessage));
+                        }
+                        else
+                        {
+                            var decodeableCharacters = _decoder.GetCharCount(buffer, 0, offset, false);
+                            if (decodeableCharacters > 0)
+                            {
+                                var charPayload = new char[decodeableCharacters];
+                                var decodedChars = _decoder.GetChars(buffer, 0, offset, charPayload, 0, false);
+                                if (decodedChars > 0)
+                                {
+                                    OnStringMessageReceived(new StringMessageReceivedEventArgs(Identifier, new string(charPayload)));
+                                }
+                            }
+                        }
                     }
                     else if (_options.KeepAlive && _tcpClient.Client.Poll(0, SelectMode.SelectRead))
                     {

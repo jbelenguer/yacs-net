@@ -91,6 +91,39 @@ namespace Yacs
         /// <inheritdoc />
         public void Send(ChannelIdentifier destination, string message)
         {
+            if (string.IsNullOrEmpty(message))
+                return;
+            if (_options.Encoder == null)
+            {
+                throw new InvalidOperationException($"The channel has no configured encoder, so only bytes can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoder)} for more information.");
+            }
+            bool errored = false;
+            lock (_channelsLock)
+            {
+                if (_knownClients.ContainsKey(destination))
+                {
+                    _knownClients[destination].Send(message);
+                }
+                else
+                {
+                    errored = true;
+                }
+            }
+            if (errored)
+            {
+                OnError(new ChannelErrorEventArgs(destination, new OfflineChannelException(destination)));
+            }
+        }
+
+        /// <inheritdoc />
+        public void Send(ChannelIdentifier destination, byte[] message)
+        {
+            if (message == null || message.Length == 0)
+                return;
+            if (_options.Encoder != null)
+            {
+                throw new InvalidOperationException($"The channel has a configured encoder, so only strings can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoder)} for more information.");
+            }
             bool errored = false;
             lock (_channelsLock)
             {
@@ -151,7 +184,10 @@ namespace Yacs
         public event EventHandler<ConnectionLostEventArgs> ConnectionLost;
 
         /// <inheritdoc />
-        public event EventHandler<MessageReceivedEventArgs> MessageReceived;
+        public event EventHandler<StringMessageReceivedEventArgs> StringMessageReceived;
+
+        /// <inheritdoc />
+        public event EventHandler<ByteMessageReceivedEventArgs> ByteMessageReceived;
 
         /// <inheritdoc />
         public event EventHandler<ChannelErrorEventArgs> ChannelError;
@@ -220,12 +256,21 @@ namespace Yacs
         }
 
         /// <summary>
-        /// Triggers a <see cref="MessageReceived"/> event.
+        /// Triggers a <see cref="StringMessageReceived"/> event.
         /// </summary>
         /// <param name="e">Event arguments.</param>
-        protected virtual void OnMessageReceived(MessageReceivedEventArgs e)
+        protected virtual void OnStringMessageReceived(StringMessageReceivedEventArgs e)
         {
-            MessageReceived?.Invoke(this, e);
+            StringMessageReceived?.Invoke(this, e);
+        }
+
+        /// <summary>
+        /// Triggers a <see cref="ByteMessageReceived"/> event.
+        /// </summary>
+        /// <param name="e">Event arguments.</param>
+        protected virtual void OnByteMessageReceived(ByteMessageReceivedEventArgs e)
+        {
+            ByteMessageReceived?.Invoke(this, e);
         }
 
         /// <summary>
@@ -255,8 +300,15 @@ namespace Yacs
                             {
                                 newChannel = new Channel(tcpClient, _newChannelOptions);
                                 newChannel.ConnectionLost += Channel_ConnectionLost;
-                                newChannel.MessageReceived += Channel_MessageReceived;
                                 newChannel.ChannelError += Channel_Error;
+                                if (_options.Encoder == null)
+                                {
+                                    newChannel.ByteMessageReceived += Channel_ByteMessageReceived;
+                                }
+                                else
+                                {
+                                    newChannel.StringMessageReceived += Channel_StringMessageReceived;
+                                }
 
                                 if (_knownClients.ContainsKey(newChannel.Identifier))
                                 {
@@ -341,9 +393,14 @@ namespace Yacs
             OnConnectionLost(e);
         }
 
-        private void Channel_MessageReceived(object sender, MessageReceivedEventArgs e)
+        private void Channel_StringMessageReceived(object sender, StringMessageReceivedEventArgs e)
         {
-            OnMessageReceived(e);
+            OnStringMessageReceived(e);
+        }
+
+        private void Channel_ByteMessageReceived(object sender, ByteMessageReceivedEventArgs e)
+        {
+            OnByteMessageReceived(e);
         }
 
         private void Channel_Error(object sender, ChannelErrorEventArgs e)
