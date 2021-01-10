@@ -66,7 +66,8 @@ namespace Yacs
 
             OptionsValidator.Validate(_options);
 
-            _tcpServer = new TcpListener(IPAddress.Loopback, port);
+            _tcpServer = new TcpListener(IPAddress.Any, port);
+
             _knownClients = new ConcurrentDictionary<ChannelIdentifier, Channel>();
             _discoveryCancellationSource = new CancellationTokenSource();
             _newClientsCancellationSource = new CancellationTokenSource();
