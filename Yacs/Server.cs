@@ -63,7 +63,7 @@ namespace Yacs
             _options = options
                 ?? new ServerOptions();
 
-            _tcpServer = new TcpListener(IPAddress.Loopback, port);
+            _tcpServer = new TcpListener(IPAddress.Any, port);
             _knownClients = new ConcurrentDictionary<ChannelIdentifier, Channel>();
             _discoveryCancellationSource = new CancellationTokenSource();
             _newClientsCancellationSource = new CancellationTokenSource();
