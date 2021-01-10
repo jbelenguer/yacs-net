@@ -8,6 +8,7 @@ using Yacs.Events;
 using Yacs.Exceptions;
 using Yacs.MessageModels;
 using Yacs.Options;
+using Yacs.Services;
 
 namespace Yacs
 {
@@ -63,7 +64,10 @@ namespace Yacs
             _options = options
                 ?? new ServerOptions();
 
+            OptionsValidator.Validate(_options);
+
             _tcpServer = new TcpListener(IPAddress.Any, port);
+
             _knownClients = new ConcurrentDictionary<ChannelIdentifier, Channel>();
             _discoveryCancellationSource = new CancellationTokenSource();
             _newClientsCancellationSource = new CancellationTokenSource();
