@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Yacs.Events;
 using Yacs.Options;
 
@@ -23,9 +24,9 @@ namespace Yacs
         bool IsDiscoveryEnabled { get; set; }
 
         /// <summary>
-        /// Gets the number of online channels connected to the <see cref="IServer"/>.
+        /// Gets the channel identifiers of connected channels.
         /// </summary>
-        int ChannelCount { get; }
+        IReadOnlyList<ChannelIdentifier> Channels { get; }
 
         /// <summary>
         /// Sends a message to the <see cref="IChannel"/> specified. This method will throw an <see cref="InvalidOperationException"/> if the channel has no <see cref="BaseOptions.Encoder"/> set.

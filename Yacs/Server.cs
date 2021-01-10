@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -45,13 +47,10 @@ namespace Yacs
         }
 
         /// <inheritdoc />
-        public bool IsDiscoveryEnabled { get; set; }
+        public IReadOnlyList<ChannelIdentifier> Channels => _knownClients.Keys.ToList();
 
         /// <inheritdoc />
-        public int ChannelCount
-        {
-            get { return _knownClients.Count; }
-        }
+        public bool IsDiscoveryEnabled { get; set; }
 
         /// <summary>
         /// Creates a new Yacs <see cref="Server"/>. This can accept connections from many <see cref="Channel"/> instances.
