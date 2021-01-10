@@ -10,6 +10,7 @@
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/jbelenguer/yacs-net</PackageProjectUrl>
     <PackageIcon>yacs_64.png</PackageIcon>
+    <Authors>Jorge Belenguer, Adam Goodwin</Authors>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

@@ -8,6 +8,7 @@ using Yacs.Events;
 using Yacs.Exceptions;
 using Yacs.MessageModels;
 using Yacs.Options;
+using Yacs.Services;
 
 namespace Yacs
 {
@@ -62,6 +63,8 @@ namespace Yacs
             _port = port;
             _options = options
                 ?? new ServerOptions();
+
+            OptionsValidator.Validate(_options);
 
             _tcpServer = new TcpListener(IPAddress.Loopback, port);
             _knownClients = new ConcurrentDictionary<ChannelIdentifier, Channel>();

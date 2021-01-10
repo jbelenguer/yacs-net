@@ -3,9 +3,8 @@
 namespace Yacs.Exceptions
 {
     /// <summary>
-    /// Represents an error due to a <see cref="Channel"/> being offline.
+    /// Represents an error due to an <see cref="IChannel"/> being offline.
     /// </summary>
-    [Serializable]
     public class OfflineChannelException : Exception
     {
         /// <summary>
