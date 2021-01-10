@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -15,11 +15,10 @@ namespace Yacs
     public class Server : IServer, IDisposable
     {
         private const int DEFAULT_DELAY = 250;
-        private readonly object _channelsLock = new object();
 
         private readonly int _port;
         private readonly TcpListener _tcpServer;
-        private readonly Dictionary<ChannelIdentifier, Channel> _knownClients;
+        private readonly ConcurrentDictionary<ChannelIdentifier, Channel> _knownClients;
         private readonly CancellationTokenSource _discoveryCancellationSource;
         private readonly CancellationTokenSource _newClientsCancellationSource;
         private readonly ChannelOptions _newChannelOptions;
@@ -50,7 +49,7 @@ namespace Yacs
         /// <inheritdoc />
         public int ChannelCount
         {
-            get { lock (_channelsLock) { return _knownClients.Count; } }
+            get { return _knownClients.Count; }
         }
 
         /// <summary>
@@ -65,7 +64,7 @@ namespace Yacs
                 ?? new ServerOptions();
 
             _tcpServer = new TcpListener(IPAddress.Loopback, port);
-            _knownClients = new Dictionary<ChannelIdentifier, Channel>();
+            _knownClients = new ConcurrentDictionary<ChannelIdentifier, Channel>();
             _discoveryCancellationSource = new CancellationTokenSource();
             _newClientsCancellationSource = new CancellationTokenSource();
 
@@ -97,22 +96,15 @@ namespace Yacs
             {
                 throw new InvalidOperationException($"The channel has no configured encoder, so only bytes can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoder)} for more information.");
             }
-            bool errored = false;
-            lock (_channelsLock)
+
+            if (_knownClients.TryGetValue(destination, out var channel))
             {
-                if (_knownClients.ContainsKey(destination))
-                {
-                    _knownClients[destination].Send(message);
-                }
-                else
-                {
-                    errored = true;
-                }
+                channel?.Send(message);
             }
-            if (errored)
+            else
             {
                 OnError(new ChannelErrorEventArgs(destination, new OfflineChannelException(destination)));
-            }
+            }  
         }
 
         /// <inheritdoc />
@@ -124,19 +116,12 @@ namespace Yacs
             {
                 throw new InvalidOperationException($"The channel has a configured encoder, so only strings can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoder)} for more information.");
             }
-            bool errored = false;
-            lock (_channelsLock)
+
+            if (_knownClients.TryGetValue(destination, out var channel))
             {
-                if (_knownClients.ContainsKey(destination))
-                {
-                    _knownClients[destination].Send(message);
-                }
-                else
-                {
-                    errored = true;
-                }
+                channel?.Send(message);
             }
-            if (errored)
+            else
             {
                 OnError(new ChannelErrorEventArgs(destination, new OfflineChannelException(destination)));
             }
@@ -145,32 +130,19 @@ namespace Yacs
         /// <inheritdoc />
         public bool IsChannelOnline(ChannelIdentifier channel)
         {
-            lock (_channelsLock)
-            {
-                return _knownClients.ContainsKey(channel);
-            }
+            return _knownClients.TryGetValue(channel, out _);
         }
 
         /// <inheritdoc />
-        public void Disconnect(ChannelIdentifier channel)
+        public void Disconnect(ChannelIdentifier channelId)
         {
-            bool errored = false;
-            lock (_channelsLock)
+            if (_knownClients.TryRemove(channelId, out var channel))
             {
-                if (_knownClients.ContainsKey(channel))
-                {
-                    _knownClients[channel].Dispose();
-                }
-                else
-                {
-                    errored = true;
-                }
-                _knownClients.Remove(channel);
+                channel.Dispose();
             }
-
-            if (errored)
+            else
             {
-                OnError(new ChannelErrorEventArgs(channel, new OfflineChannelException(channel)));
+                OnError(new ChannelErrorEventArgs(channelId, new OfflineChannelException(channelId)));
             }
         }
 
@@ -294,39 +266,38 @@ namespace Yacs
                     if (_enabled)
                     {
                         Channel newChannel = null;
-                        lock (_channelsLock)
-                        {
-                            if (_options.MaximumChannels == 0 || _knownClients.Count < _options.MaximumChannels)
-                            {
-                                newChannel = new Channel(tcpClient, _newChannelOptions);
-                                newChannel.ConnectionLost += Channel_ConnectionLost;
-                                newChannel.ChannelError += Channel_Error;
-                                if (_options.Encoder == null)
-                                {
-                                    newChannel.ByteMessageReceived += Channel_ByteMessageReceived;
-                                }
-                                else
-                                {
-                                    newChannel.StringMessageReceived += Channel_StringMessageReceived;
-                                }
 
-                                if (_knownClients.ContainsKey(newChannel.Identifier))
-                                {
-                                    _knownClients[newChannel.Identifier].Dispose();
-                                    _knownClients[newChannel.Identifier] = newChannel;
-                                }
-                                else
-                                {
-                                    _knownClients.Add(new ChannelIdentifier(tcpClient.Client.RemoteEndPoint), newChannel);
-                                }
+                        if (_options.MaximumChannels == 0 || _knownClients.Count < _options.MaximumChannels)
+                        {
+                            newChannel = new Channel(tcpClient, _newChannelOptions);
+                            newChannel.ConnectionLost += Channel_ConnectionLost;
+                            newChannel.ChannelError += Channel_Error;
+                            if (_options.Encoder == null)
+                            {
+                                newChannel.ByteMessageReceived += Channel_ByteMessageReceived;
                             }
                             else
                             {
-                                var connectionLostEventArgs = new ConnectionLostEventArgs(new ChannelIdentifier(tcpClient.Client.RemoteEndPoint), "Connection refused. The number of active connections has reached the limit.");
-                                tcpClient.Close();
-                                OnConnectionLost(connectionLostEventArgs);
+                                newChannel.StringMessageReceived += Channel_StringMessageReceived;
+                            }
+
+                            if (_knownClients.ContainsKey(newChannel.Identifier))
+                            {
+                                _knownClients[newChannel.Identifier].Dispose();
+                                _knownClients[newChannel.Identifier] = newChannel;
+                            }
+                            else
+                            {
+                                _knownClients.TryAdd(new ChannelIdentifier(tcpClient.Client.RemoteEndPoint), newChannel);
                             }
                         }
+                        else
+                        {
+                            var connectionLostEventArgs = new ConnectionLostEventArgs(new ChannelIdentifier(tcpClient.Client.RemoteEndPoint), "Connection refused. The number of active connections has reached the limit.");
+                            tcpClient.Close();
+                            OnConnectionLost(connectionLostEventArgs);
+                        }
+                        
                         if (newChannel != null)
                         {
                             var connectionReceivedEventArgs = new ConnectionReceivedEventArgs(newChannel.Identifier);
@@ -382,14 +353,11 @@ namespace Yacs
 
         private void Channel_ConnectionLost(object sender, ConnectionLostEventArgs e)
         {
-            lock (_channelsLock)
+            if (_knownClients.TryRemove(e.EndPoint, out var channel))
             {
-                if (_knownClients.TryGetValue(e.EndPoint, out var channel))
-                {
-                    channel.Dispose();
-                    _knownClients.Remove(e.EndPoint);
-                }
+                channel.Dispose();
             }
+            
             OnConnectionLost(e);
         }
 
