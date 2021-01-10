@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -8,6 +7,7 @@ using System.Threading.Tasks;
 using Yacs.Events;
 using Yacs.MessageModels;
 using Yacs.Options;
+using Yacs.Services;
 
 namespace Yacs
 {
@@ -28,9 +28,11 @@ namespace Yacs
 
         internal Channel(TcpClient tcpClient, ChannelOptions options)
         {
+            OptionsValidator.Validate(options);
+
             Identifier = new ChannelIdentifier(tcpClient.Client.RemoteEndPoint);
             _options = options;
-            _decoder = _options.Encoder.GetDecoder();
+            _decoder = _options.Encoder?.GetDecoder();
             _tcpClient = tcpClient;
             _messageReceptionTask = Task.Run(ReceptionLoop, _source.Token);
         }
@@ -232,7 +234,7 @@ namespace Yacs
                         // Loop to receive all the data sent by the client.
                         while (stream.DataAvailable)
                         {
-                            bytesRead = stream.Read(buffer, offset, buffer.Length-offset);
+                            bytesRead = stream.Read(buffer, offset, buffer.Length - offset);
                             offset += bytesRead;
                             if (offset >= buffer.Length)
                             {
