@@ -28,11 +28,20 @@ namespace Yacs
         int ChannelCount { get; }
 
         /// <summary>
-        /// Sends data to a specific <see cref="IChannel"/>.
+        /// Sends a message to the <see cref="IChannel"/> specified. This method will throw an <see cref="InvalidOperationException"/> if the channel has no <see cref="BaseOptions.Encoder"/> set.
         /// </summary>
         /// <param name="destination">The identifier of the <see cref="IChannel"/> to which the message should be sent.</param>
-        /// <param name="message">The message to send.</param>
+        /// <param name="message">The string message to send.</param>
+        /// <exception cref="InvalidOperationException"></exception>
         void Send(ChannelIdentifier destination, string message);
+
+        /// <summary>
+        /// Sends a message to the <see cref="IChannel"/> specified. This method will throw an <see cref="InvalidOperationException"/> if the channel has an <see cref="BaseOptions.Encoder"/> set.
+        /// </summary>
+        /// <param name="destination">The identifier of the <see cref="IChannel"/> to which the message should be sent.</param>
+        /// <param name="message">The byte message to send.</param>
+        /// <exception cref="InvalidOperationException"></exception>
+        void Send(ChannelIdentifier destination, byte[] message);
 
         /// <summary>
         /// Gets a value indicating whether a specific <see cref="IChannel"/> is online.
@@ -66,9 +75,14 @@ namespace Yacs
         event EventHandler<ConnectionLostEventArgs> ConnectionLost;
 
         /// <summary>
-        /// Event triggered when a message is received from an <see cref="IChannel"/>.
+        /// Event triggered when a string message is received from an <see cref="IChannel"/>.
         /// </summary>
-        event EventHandler<MessageReceivedEventArgs> MessageReceived;
+        event EventHandler<StringMessageReceivedEventArgs> StringMessageReceived;
+
+        /// <summary>
+        /// Event triggered when a byte array message is received from an <see cref="IChannel"/>.
+        /// </summary>
+        event EventHandler<ByteMessageReceivedEventArgs> ByteMessageReceived;
 
         /// <summary>
         /// Event triggered when an <see cref="IChannel"/> throws an error.

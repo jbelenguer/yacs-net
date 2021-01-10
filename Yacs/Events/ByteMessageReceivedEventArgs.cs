@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Text;
 
 namespace Yacs.Events
 {
     /// <summary>
-    /// Contains arguments for when a new message is received.
+    /// Contains arguments for when a new byte array message is received.
     /// </summary>
-    public class MessageReceivedEventArgs : EventArgs
+    public class ByteMessageReceivedEventArgs : EventArgs
     {
         /// <summary>
         /// Gets the client's end point.
@@ -17,9 +14,9 @@ namespace Yacs.Events
         /// <summary>
         /// Gets the message received.
         /// </summary>
-        public string Message { get; private set; }
+        public byte[] Message { get; private set; }
         
-        internal MessageReceivedEventArgs(ChannelIdentifier remoteEndPoint, string message)
+        internal ByteMessageReceivedEventArgs(ChannelIdentifier remoteEndPoint, byte[] message)
         {
             EndPoint = remoteEndPoint;
             Message = message;

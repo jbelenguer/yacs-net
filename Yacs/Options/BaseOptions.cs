@@ -8,7 +8,7 @@ namespace Yacs.Options
     public abstract class BaseOptions
     {
         /// <summary>
-        /// Gets or sets the encoding used for communication. Default: UTF-8
+        /// Gets or sets the encoding used for communication. If this value is null, then messages will be byte arrays instead of strings. Default: UTF-8
         /// </summary>
         public Encoding Encoder { get; set; }
 
