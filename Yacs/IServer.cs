@@ -84,10 +84,5 @@ namespace Yacs
         /// Event triggered when a byte array message is received from an <see cref="IChannel"/>.
         /// </summary>
         event EventHandler<ByteMessageReceivedEventArgs> ByteMessageReceived;
-
-        /// <summary>
-        /// Event triggered when an <see cref="IChannel"/> throws an error.
-        /// </summary>
-        event EventHandler<ChannelErrorEventArgs> ChannelError;
     }
 }

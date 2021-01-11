@@ -106,7 +106,7 @@ namespace Yacs
             }
             else
             {
-                OnError(new ChannelErrorEventArgs(destination, new OfflineChannelException(destination)));
+                throw new OfflineChannelException(destination);
             }  
         }
 
@@ -126,7 +126,7 @@ namespace Yacs
             }
             else
             {
-                OnError(new ChannelErrorEventArgs(destination, new OfflineChannelException(destination)));
+                throw new OfflineChannelException(destination);
             }
         }
 
@@ -142,10 +142,6 @@ namespace Yacs
             if (_knownClients.TryRemove(channelId, out var channel))
             {
                 channel.Dispose();
-            }
-            else
-            {
-                OnError(new ChannelErrorEventArgs(channelId, new OfflineChannelException(channelId)));
             }
         }
 
@@ -163,9 +159,6 @@ namespace Yacs
 
         /// <inheritdoc />
         public event EventHandler<ByteMessageReceivedEventArgs> ByteMessageReceived;
-
-        /// <inheritdoc />
-        public event EventHandler<ChannelErrorEventArgs> ChannelError;
 
         /// <summary>
         /// Stops the <see cref="Server"/> in an ordered manner, releasing all the resources used by it.
@@ -248,15 +241,6 @@ namespace Yacs
             ByteMessageReceived?.Invoke(this, e);
         }
 
-        /// <summary>
-        /// Triggers a <see cref="ChannelError"/> event.
-        /// </summary>
-        /// <param name="e">Event arguments.</param>
-        protected virtual void OnError(ChannelErrorEventArgs e)
-        {
-            ChannelError?.Invoke(this, e);
-        }
-
         private void NewConnectionListenerLoop()
         {
             try
@@ -274,7 +258,6 @@ namespace Yacs
                         {
                             newChannel = new Channel(tcpClient, _newChannelOptions);
                             newChannel.ConnectionLost += Channel_ConnectionLost;
-                            newChannel.ChannelError += Channel_Error;
                             if (_options.Encoder == null)
                             {
                                 newChannel.ByteMessageReceived += Channel_ByteMessageReceived;
@@ -373,11 +356,5 @@ namespace Yacs
         {
             OnByteMessageReceived(e);
         }
-
-        private void Channel_Error(object sender, ChannelErrorEventArgs e)
-        {
-            OnError(e);
-        }
-
     }
 }

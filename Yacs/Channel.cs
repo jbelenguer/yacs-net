@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Yacs.Events;
+using Yacs.Exceptions;
 using Yacs.MessageModels;
 using Yacs.Options;
 using Yacs.Services;
@@ -94,20 +95,16 @@ namespace Yacs
             {
                 throw new InvalidOperationException($"The channel has no configured encoder, so only bytes can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoder)} for more information.");
             }
+            var msg = _options.Encoder.GetBytes(message);
             try
             {
-                var msg = _options.Encoder.GetBytes(message);
-
                 var stream = _tcpClient.GetStream();
                 stream.Write(msg, 0, msg.Length);
             }
-            catch (ObjectDisposedException e)
-            {
-                OnConnectionLost(new ConnectionLostEventArgs(Identifier, e));
-            }
             catch (Exception e)
             {
-                OnError(new ChannelErrorEventArgs(Identifier, e));
+                OnConnectionLost(new ConnectionLostEventArgs(Identifier, e));
+                throw new OfflineChannelException(Identifier);
             }
         }
 
@@ -125,13 +122,10 @@ namespace Yacs
                 var stream = _tcpClient.GetStream();
                 stream.Write(message, 0, message.Length);
             }
-            catch (ObjectDisposedException e)
-            {
-                OnConnectionLost(new ConnectionLostEventArgs(Identifier, e));
-            }
             catch (Exception e)
             {
-                OnError(new ChannelErrorEventArgs(Identifier, e));
+                OnConnectionLost(new ConnectionLostEventArgs(Identifier, e));
+                throw new OfflineChannelException(Identifier);
             }
         }
 
@@ -143,9 +137,6 @@ namespace Yacs
 
         /// <inheritdoc />
         public event EventHandler<ConnectionLostEventArgs> ConnectionLost;
-
-        /// <inheritdoc />
-        public event EventHandler<ChannelErrorEventArgs> ChannelError;
 
         /// <summary>
         /// Disposes the communication channel and releases all resources used by it.
@@ -166,7 +157,11 @@ namespace Yacs
             {
                 if (disposing)
                 {
-                    _source?.Cancel();
+                    try
+                    {
+                        _source?.Cancel();
+                    } 
+                    catch(Exception) { }
                     _tcpClient?.Close();
                     _source?.Dispose();
                 }
@@ -203,16 +198,6 @@ namespace Yacs
         {
             ConnectionLost?.Invoke(this, e);
         }
-
-        /// <summary>
-        /// Triggers a <see cref="ChannelError"/> event.
-        /// </summary>
-        /// <param name="e">Event arguments.</param>
-        protected virtual void OnError(ChannelErrorEventArgs e)
-        {
-            ChannelError?.Invoke(this, e);
-        }
-
 
         private void ReceptionLoop()
         {
