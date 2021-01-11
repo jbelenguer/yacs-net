@@ -42,10 +42,5 @@ namespace Yacs
         /// Event triggered to indicate the <see cref="IChannel"/> connection was lost.
         /// </summary>
         event EventHandler<ConnectionLostEventArgs> ConnectionLost;
-
-        /// <summary>
-        /// Event triggered to indicate the <see cref="IChannel"/> connection experienced an error.
-        /// </summary>
-        event EventHandler<ChannelErrorEventArgs> ChannelError;
     }
 }
