@@ -258,7 +258,7 @@ namespace Yacs
                     }
                     if (_source.Token.IsCancellationRequested)
                     {
-                        return;
+                        break;
                     }
 
                     Thread.Sleep(DEFAULT_DELAY);
