@@ -75,7 +75,7 @@ namespace Yacs
             {
                 Encoder = _options.Encoder,
                 ReceptionBufferSize = _options.ReceptionBufferSize,
-                KeepAlive = _options.ActiveChannelMonitoring
+                ActiveMonitoring = _options.ActiveChannelMonitoring
             };
 
             if (_options.IsDiscoverable)
