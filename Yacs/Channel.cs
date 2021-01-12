@@ -103,8 +103,8 @@ namespace Yacs
             }
             catch (Exception e)
             {
-                OnConnectionLost(new ConnectionLostEventArgs(Identifier, e));
-                throw new OfflineChannelException(Identifier);
+                _source.Cancel();
+                throw new SendMessageException(Identifier, e);
             }
         }
 
@@ -124,8 +124,8 @@ namespace Yacs
             }
             catch (Exception e)
             {
-                OnConnectionLost(new ConnectionLostEventArgs(Identifier, e));
-                throw new OfflineChannelException(Identifier);
+                _source.Cancel();
+                throw new SendMessageException(Identifier, e);
             }
         }
 
@@ -246,7 +246,7 @@ namespace Yacs
                             }
                         }
                     }
-                    else if (_options.KeepAlive && _tcpClient.Client.Poll(0, SelectMode.SelectRead))
+                    else if (_options.ActiveMonitoring && _tcpClient.Client.Poll(0, SelectMode.SelectRead))
                     {
                         // If the poll returns true, it can be for 3 reasons:
                         // - if Listen() has been called and a connection is pending (we know it is not the case here)
@@ -256,6 +256,11 @@ namespace Yacs
                         if (_tcpClient.Client.Available == 0)
                             break;
                     }
+                    if (_source.Token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
                     Thread.Sleep(DEFAULT_DELAY);
                 }
                 OnConnectionLost(new ConnectionLostEventArgs(Identifier, "Socket failed to poll, this suggests connection has been closed, reset or terminated"));
