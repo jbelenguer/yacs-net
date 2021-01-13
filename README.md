@@ -1,56 +1,81 @@
-# YACS.NET
-![yacs icon](https://github.com/jbelenguer/yacs-net/blob/master/yacs_64.png)
+# ![yacs icon](./yacs_64.png) Yacs.NET
+
+[![NuGet version (Yacs.NET)](https://img.shields.io/nuget/v/yacs?style=flat-square)](https://www.nuget.org/packages/Yacs/)
+
 Yet another communication system for .NET
 
+## Introduction
+
+Yacs is an abstraction over the `TcpClient` class from .NET designed to make communication between different application nodes simple.
+
+```cs
+using Yacs;
+
+// Create a new Yacs server listening on port 1234.
+var server = new Server(1234);
+
+// Create a new Yacs channel to connect to the server.
+var channel = new Channel("127.0.0.1", 1234);
+
+// Send a message.
+channel.Send("Hello, this Yacs.");
+```
+
 ## Motivation
-It is not the first time that I needed a communication library to allow me:
 
-- Communicate different nodes using TCP directly
-- Simple to use
-- Have some advanced features (like node discovery)
+Yacs:
 
-Either if you are developing a game, or your own IoT system, the only option out there is to actually write it yourself over the System.Net.Sockets library (TcpListener/TcpClient).
+- Allows an application to communicate directly with other nodes via TCP
+- Notifies applications of incoming messages and losses of connection via standard .NET events
+- Supports sending and receiving messages as strings or byte arrays
 
-Since this is not the first time I find this issue, I decided to write one so I can reuse it in a couple of projects.
+Yacs has a few advanced features, such as node discovery for local networks, but it is not intended to act as a complex communication framework – Yacs' purpose is to do just enough to save you from the tedious and repetitive work normally involved in using TCP in .NET.
 
 ## Basic usage
 
-For the basic usage you will need the classes in the namespace `Yacs`. So: 
+For basic usage you only need the classes in the namespace `Yacs`. So: 
 
 ```cs
 using Yacs;
 ```
 
 ### Server
-To create a yacs server you just need to do:
+
+A Yacs server can be instantiated as follows:
+
 ```cs
-Server _myServer = new Server(port);
-```
-This will start your new server, listening in the indicated port. This by itself is not very useful, so what you should do next is subscribe to the events you are interested at. For instance, you could subscribe to the new messages received with:
-```cs
-_myServer.MessageReceived += MyServer_MessageReceived;
+var server = new Server(port);
 ```
 
-Every event will identify the client who triggerede it with their end point, so it is easy to implement a reply with something like:
+This will start your new server, listening on the indicated port. This by itself is not very useful, so what you can do next is subscribe to the events you are interested in. For instance, you could subscribe to new messages received with:
+
 ```cs
-private static void MyServer_MessageReceived(object sender, SimpleSocket.Events.MessageReceivedEventArgs e)
+server.StringMessageReceived += Server_StringMessageReceived;
+```
+
+Every event will identify the channel that triggered it, so it is easy to implement a reply with something like the following:
+
+```cs
+private static void MyServer_StringMessageReceived(object sender, StringMessageReceivedEventArgs e)
 {
-    _myServer.Send(e.EndPoint, "Ok, copy!");
+    _server.Send(e.ChannelIdentifier, "Ok, copy!");
 }
 ```
-### Client
-To create a client and send some data, it is as easy as:
+
+### Channel
+
+To create a channel and send some data to the server, it is as easy as:
+
 ```cs
-client = new Channel(address, port);
+var channel = new Channel(host, port);
 client.Send("TEST #1");
 ```
 
-Capture replies from servers is also quite easy subscribing to the event:
+Capturing replies from servers is also quite easy, just subscribe to the event:
+
 ```cs
-client.MessageReceived += Client_MessageReceived;
+channel.StringMessageReceived += Client_StringMessageReceived;
 ```
-
-
 
 ## Attributions
 Icon made by <a href="https://www.flaticon.com/authors/srip" title="srip">srip</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a>

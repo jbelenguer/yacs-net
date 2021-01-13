@@ -3,7 +3,7 @@
     /// <summary>
     /// Represents the options to create a <see cref="Server"/>.
     /// </summary>
-    public class ServerOptions : ChannelOptions
+    public class ServerOptions : BaseOptions
     {
         /// <summary>
         /// Gets if a server is discoverable. Default: yes 
@@ -21,12 +21,18 @@
         public int MaximumChannels { get; set; }
 
         /// <summary>
+        /// Gets or sets if the channels in the server should be monitored for disconnections. Default: false
+        /// </summary>
+        public bool ActiveChannelMonitoring { get; set; }
+
+        /// <summary>
         /// Creates a new <see cref="ServerOptions"/> object with the default values.
         /// </summary>
         public ServerOptions() : base()
         {
             DiscoveryPort = 11000;
             MaximumChannels = 0;
+            ActiveChannelMonitoring = false;
         }
     }
 }

@@ -5,25 +5,19 @@ namespace Yacs.Options
     /// <summary>
     /// Represents the options to create a <see cref="Channel"/>.
     /// </summary>
-    public class ChannelOptions
+    public class ChannelOptions : BaseOptions
     {
         /// <summary>
-        /// Gets or sets the encoding used for communication. Default: UTF-8
+        /// Gets or sets the active monitoring option. When this option is enabled, the channel will periodically check if the communication is correct, triggering a <see cref="Events.ChannelDisconnectedEventArgs"/> when it is not successful.
         /// </summary>
-        public Encoding Encoder { get; set; }
-
-        /// <summary>
-        /// Gets or sets the size of the reception buffer in bytes. A lower number will need more iterations to get a big message, a big number will consume more memory. Default: 32767
-        /// </summary>
-        public int ReceptionBufferSize { get; set; }
+        public bool ActiveMonitoring { get; set; }
 
         /// <summary>
         /// Creates new <see cref="ChannelOptions"/> with the default values.
         /// </summary>
-        public ChannelOptions()
+        public ChannelOptions() : base()
         {
-            Encoder = Encoding.UTF8;
-            ReceptionBufferSize = short.MaxValue;
+            ActiveMonitoring = false;
         }
     }
 }
