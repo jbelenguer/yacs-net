@@ -11,6 +11,7 @@
     <PackageProjectUrl>https://github.com/jbelenguer/yacs-net</PackageProjectUrl>
     <PackageIcon>yacs_64.png</PackageIcon>
     <Authors>Yacs Contributors</Authors>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
