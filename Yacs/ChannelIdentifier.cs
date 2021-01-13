@@ -1,19 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
-using System.Text;
 
 namespace Yacs
 {
     /// <summary>
-    /// Identifies a <see cref="Channel"/>
+    /// Identifies an <see cref="IChannel"/>.
     /// </summary>
     public class ChannelIdentifier : IEquatable<ChannelIdentifier>
     {
-        private string _endPointString;
+        private readonly string _endPointString;
 
         /// <summary>
-        /// Creates a new <see cref="ChannelIdentifier"/> based on an <see cref="EndPoint"/>
+        /// Creates a new <see cref="ChannelIdentifier"/> based on an <see cref="EndPoint"/>.
         /// </summary>
         /// <param name="endPoint">EndPoint to identify a channel.</param>
         public ChannelIdentifier(EndPoint endPoint)
@@ -38,7 +36,7 @@ namespace Yacs
         /// <returns></returns>
         public override bool Equals(object obj)
         {
-            return obj is ChannelIdentifier other && this.Equals(other);
+            return obj is ChannelIdentifier other && Equals(other);
         }
 
         /// <summary>

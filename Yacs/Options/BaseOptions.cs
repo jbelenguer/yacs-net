@@ -10,7 +10,7 @@ namespace Yacs.Options
         /// <summary>
         /// Gets or sets the encoding used for communication. If this value is null, then messages will be byte arrays instead of strings. Default: UTF-8
         /// </summary>
-        public Encoding Encoder { get; set; }
+        public Encoding Encoding { get; set; }
 
         /// <summary>
         /// Gets or sets the size of the reception buffer in bytes. A lower number will need more iterations to get a big message, a big number will consume more memory. Default: 32767
@@ -22,7 +22,7 @@ namespace Yacs.Options
         /// </summary>
         public BaseOptions()
         {
-            Encoder = Encoding.UTF8;
+            Encoding = Encoding.UTF8;
             ReceptionBufferSize = short.MaxValue;
         }
     }

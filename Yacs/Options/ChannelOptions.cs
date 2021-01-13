@@ -8,7 +8,7 @@ namespace Yacs.Options
     public class ChannelOptions : BaseOptions
     {
         /// <summary>
-        /// Gets or sets the active monitoring option. When this option is enabled, the channel will periodically check if the communication is correct, triggering a <see cref="Events.ConnectionLostEventArgs"/> when it is not successful.
+        /// Gets or sets the active monitoring option. When this option is enabled, the channel will periodically check if the communication is correct, triggering a <see cref="Events.ChannelDisconnectedEventArgs"/> when it is not successful.
         /// </summary>
         public bool ActiveMonitoring { get; set; }
 

@@ -22,10 +22,10 @@ namespace Yacs
         private readonly Task _messageReceptionTask;
         private readonly ChannelOptions _options;
         private readonly Decoder _decoder;
-        private bool disposedValue;
+        private bool _disposedValue;
 
         /// <inheritdoc/>
-        public ChannelIdentifier Identifier { get; private set; }
+        public ChannelIdentifier Identifier { get; }
 
         internal Channel(TcpClient tcpClient, ChannelOptions options)
         {
@@ -33,7 +33,7 @@ namespace Yacs
 
             Identifier = new ChannelIdentifier(tcpClient.Client.RemoteEndPoint);
             _options = options;
-            _decoder = _options.Encoder?.GetDecoder();
+            _decoder = _options.Encoding?.GetDecoder();
             _tcpClient = tcpClient;
             _messageReceptionTask = Task.Run(ReceptionLoop, _source.Token);
         }
@@ -91,11 +91,11 @@ namespace Yacs
         {
             if (string.IsNullOrEmpty(message))
                 return;
-            if (_options.Encoder == null)
+            if (_options.Encoding == null)
             {
-                throw new InvalidOperationException($"The channel has no configured encoder, so only bytes can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoder)} for more information.");
+                throw new InvalidOperationException($"The channel has no configured encoder, so only bytes can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoding)} for more information.");
             }
-            var msg = _options.Encoder.GetBytes(message);
+            var msg = _options.Encoding.GetBytes(message);
             try
             {
                 var stream = _tcpClient.GetStream();
@@ -113,9 +113,9 @@ namespace Yacs
         {
             if (message == null || message.Length == 0)
                 return;
-            if (_options.Encoder != null)
+            if (_options.Encoding != null)
             {
-                throw new InvalidOperationException($"The channel has a configured encoder, so only strings can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoder)} for more information.");
+                throw new InvalidOperationException($"The channel has a configured encoder, so only strings can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoding)} for more information.");
             }
             try
             {
@@ -136,7 +136,7 @@ namespace Yacs
         public event EventHandler<ByteMessageReceivedEventArgs> ByteMessageReceived;
 
         /// <inheritdoc />
-        public event EventHandler<ConnectionLostEventArgs> ConnectionLost;
+        public event EventHandler<ChannelDisconnectedEventArgs> Disconnected;
 
         /// <summary>
         /// Disposes the communication channel and releases all resources used by it.
@@ -153,7 +153,7 @@ namespace Yacs
         /// <param name="disposing"></param>
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (!_disposedValue)
             {
                 if (disposing)
                 {
@@ -168,7 +168,7 @@ namespace Yacs
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
                 // TODO: set large fields to null
-                disposedValue = true;
+                _disposedValue = true;
             }
         }
 
@@ -191,12 +191,12 @@ namespace Yacs
         }
 
         /// <summary>
-        /// Triggers a <see cref="ConnectionLost"/> event.
+        /// Triggers a <see cref="Disconnected"/> event.
         /// </summary>
         /// <param name="e">Event arguments.</param>
-        protected virtual void OnConnectionLost(ConnectionLostEventArgs e)
+        protected virtual void OnDisconnected(ChannelDisconnectedEventArgs e)
         {
-            ConnectionLost?.Invoke(this, e);
+            Disconnected?.Invoke(this, e);
         }
 
         private void ReceptionLoop()
@@ -226,7 +226,7 @@ namespace Yacs
                                 break;
                             }
                         }
-                        if (_options.Encoder == null)
+                        if (_options.Encoding == null)
                         {
                             var byteMessage = new byte[offset];
                             Array.Copy(buffer, byteMessage, offset);
@@ -263,11 +263,11 @@ namespace Yacs
 
                     Thread.Sleep(DEFAULT_DELAY);
                 }
-                OnConnectionLost(new ConnectionLostEventArgs(Identifier, "Socket failed to poll, this suggests connection has been closed, reset or terminated"));
+                OnDisconnected(new ChannelDisconnectedEventArgs(Identifier));
             }
             catch (Exception e)
             {
-                OnConnectionLost(new ConnectionLostEventArgs(Identifier, e));
+                OnDisconnected(new ChannelDisconnectedEventArgs(Identifier, e));
             }
         }
     }

@@ -1,29 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Text;
 
 namespace Yacs.Events
 {
     /// <summary>
-    /// Contains arguments for when a new string message is received.
+    /// Contains the arguments for when a new string message is received.
     /// </summary>
     public class StringMessageReceivedEventArgs : EventArgs
     {
         /// <summary>
-        /// Gets the client's end point.
+        /// Gets the identifier of the channel through which the message was received.
         /// </summary>
-        public ChannelIdentifier EndPoint { get; private set; }
+        public ChannelIdentifier ChannelIdentifier { get; }
+
         /// <summary>
-        /// Gets the message received.
+        /// Gets the received message.
         /// </summary>
-        public string Message { get; private set; }
-        
-        internal StringMessageReceivedEventArgs(ChannelIdentifier remoteEndPoint, string message)
+        public string Message { get; }
+
+        internal StringMessageReceivedEventArgs(ChannelIdentifier channelIdentifier, string message)
         {
-            EndPoint = remoteEndPoint;
+            ChannelIdentifier = channelIdentifier;
             Message = message;
         }
-
     }
 }

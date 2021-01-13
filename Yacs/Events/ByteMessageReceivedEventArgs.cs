@@ -3,24 +3,24 @@
 namespace Yacs.Events
 {
     /// <summary>
-    /// Contains arguments for when a new byte array message is received.
+    /// Contains the arguments for when a new byte array message is received.
     /// </summary>
     public class ByteMessageReceivedEventArgs : EventArgs
     {
         /// <summary>
-        /// Gets the client's end point.
+        /// Gets the identifier of the channel through which the message was received.
         /// </summary>
-        public ChannelIdentifier EndPoint { get; private set; }
+        public ChannelIdentifier ChannelIdentifer { get; }
+
         /// <summary>
-        /// Gets the message received.
+        /// Gets the received message.
         /// </summary>
-        public byte[] Message { get; private set; }
+        public byte[] Message { get; }
         
-        internal ByteMessageReceivedEventArgs(ChannelIdentifier remoteEndPoint, byte[] message)
+        internal ByteMessageReceivedEventArgs(ChannelIdentifier channelIdentifier, byte[] message)
         {
-            EndPoint = remoteEndPoint;
+            ChannelIdentifer = channelIdentifier;
             Message = message;
         }
-
     }
 }
