@@ -29,7 +29,7 @@ namespace Yacs
         IReadOnlyList<ChannelIdentifier> Channels { get; }
 
         /// <summary>
-        /// Sends a message to the <see cref="IChannel"/> specified. This method will throw an <see cref="InvalidOperationException"/> if the channel has no <see cref="BaseOptions.Encoder"/> set.
+        /// Sends a message to the <see cref="IChannel"/> specified. This method will throw an <see cref="InvalidOperationException"/> if the channel has no <see cref="BaseOptions.Encoding"/> set.
         /// </summary>
         /// <param name="destination">The identifier of the <see cref="IChannel"/> to which the message should be sent.</param>
         /// <param name="message">The string message to send.</param>
@@ -37,7 +37,7 @@ namespace Yacs
         void Send(ChannelIdentifier destination, string message);
 
         /// <summary>
-        /// Sends a message to the <see cref="IChannel"/> specified. This method will throw an <see cref="InvalidOperationException"/> if the channel has an <see cref="BaseOptions.Encoder"/> set.
+        /// Sends a message to the <see cref="IChannel"/> specified. This method will throw an <see cref="InvalidOperationException"/> if the channel has an <see cref="BaseOptions.Encoding"/> set.
         /// </summary>
         /// <param name="destination">The identifier of the <see cref="IChannel"/> to which the message should be sent.</param>
         /// <param name="message">The byte message to send.</param>
@@ -45,11 +45,11 @@ namespace Yacs
         void Send(ChannelIdentifier destination, byte[] message);
 
         /// <summary>
-        /// Gets a value indicating whether a specific <see cref="IChannel"/> is online.
+        /// Gets a value indicating whether a specific <see cref="IChannel"/> is connected to the server.
         /// </summary>
         /// <param name="channel">The identifier of the channel.</param>
-        /// <returns>True if the channel is online, false otherwise.</returns>
-        bool IsChannelOnline(ChannelIdentifier channel);
+        /// <returns>True if the channel is connected, false otherwise.</returns>
+        bool IsChannelConnected(ChannelIdentifier channel);
 
         /// <summary>
         /// Disconnects a specific <see cref="IChannel"/>.
@@ -58,14 +58,14 @@ namespace Yacs
         void Disconnect(ChannelIdentifier channel);
 
         /// <summary>
-        /// Event triggered when an <see cref="IChannel"/> starts a connection to the <see cref="IServer"/>.
-        /// </summary>
-        event EventHandler<ConnectionReceivedEventArgs> ConnectionReceived;
-
-        /// <summary>
         /// Event triggered when a discovery request is received from an <see cref="IChannel"/>.
         /// </summary>
-        event EventHandler<DiscoveryRequestEventArgs> DiscoveryRequestReceived;
+        event EventHandler<DiscoveryRequestReceivedEventArgs> DiscoveryRequestReceived;
+
+        /// <summary>
+        /// Event triggered when an <see cref="IChannel"/> connects to the <see cref="IServer"/>.
+        /// </summary>
+        event EventHandler<ChannelConnectedEventArgs> ChannelConnected;
 
         /// <summary>
         /// Event triggered when a connection to an <see cref="IChannel"/> is lost.
@@ -73,7 +73,12 @@ namespace Yacs
         /// <remarks> NOTE: If you are really interested in monitoring channels, you may want to enable
         /// <see cref="ServerOptions.ActiveChannelMonitoring"/>.
         /// </remarks>
-        event EventHandler<ConnectionLostEventArgs> ConnectionLost;
+        event EventHandler<ChannelDisconnectedEventArgs> ChannelDisconnected;
+
+        /// <summary>
+        /// Event triggered when a connection to an <see cref="IChannel"/> is refused.
+        /// </summary>
+        event EventHandler<ChannelRefusedEventArgs> ChannelRefused;
 
         /// <summary>
         /// Event triggered when a string message is received from an <see cref="IChannel"/>.

@@ -31,11 +31,11 @@ namespace Yacs.Services
 
         private static void Validate(BaseOptions baseOptions)
         {
-            if (baseOptions.Encoder != null)
+            if (baseOptions.Encoding != null)
             {
-                var maximumBytesForOneEncodedCharacter = baseOptions.Encoder.GetMaxByteCount(1);
+                var maximumBytesForOneEncodedCharacter = baseOptions.Encoding.GetMaxByteCount(1);
                 if (baseOptions.ReceptionBufferSize < maximumBytesForOneEncodedCharacter)
-                    throw new OptionsException($"{nameof(ServerOptions)}.{nameof(ServerOptions.ReceptionBufferSize)} must be equal to or greater than the maximum number of bytes that can be produced by encoding a single {baseOptions.Encoder.HeaderName} character ({maximumBytesForOneEncodedCharacter}).");
+                    throw new OptionsException($"{nameof(ServerOptions)}.{nameof(ServerOptions.ReceptionBufferSize)} must be equal to or greater than the maximum number of bytes that can be produced by encoding a single {baseOptions.Encoding.HeaderName} character ({maximumBytesForOneEncodedCharacter}).");
             }
         }
     }

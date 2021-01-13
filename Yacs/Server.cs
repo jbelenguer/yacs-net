@@ -73,7 +73,7 @@ namespace Yacs
 
             _newChannelOptions = new ChannelOptions
             {
-                Encoder = _options.Encoder,
+                Encoding = _options.Encoding,
                 ReceptionBufferSize = _options.ReceptionBufferSize,
                 ActiveMonitoring = _options.ActiveChannelMonitoring
             };
@@ -95,9 +95,9 @@ namespace Yacs
         {
             if (string.IsNullOrEmpty(message))
                 return;
-            if (_options.Encoder == null)
+            if (_options.Encoding == null)
             {
-                throw new InvalidOperationException($"The channel has no configured encoder, so only bytes can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoder)} for more information.");
+                throw new InvalidOperationException($"The channel has no configured encoder, so only bytes can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoding)} for more information.");
             }
 
             if (_knownClients.TryGetValue(destination, out var channel))
@@ -106,7 +106,7 @@ namespace Yacs
             }
             else
             {
-                throw new OfflineChannelException(destination);
+                throw new DisconnectedChannelException(destination);
             }  
         }
 
@@ -115,9 +115,9 @@ namespace Yacs
         {
             if (message == null || message.Length == 0)
                 return;
-            if (_options.Encoder != null)
+            if (_options.Encoding != null)
             {
-                throw new InvalidOperationException($"The channel has a configured encoder, so only strings can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoder)} for more information.");
+                throw new InvalidOperationException($"The channel has a configured encoder, so only strings can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoding)} for more information.");
             }
 
             if (_knownClients.TryGetValue(destination, out var channel))
@@ -126,12 +126,12 @@ namespace Yacs
             }
             else
             {
-                throw new OfflineChannelException(destination);
+                throw new DisconnectedChannelException(destination);
             }
         }
 
         /// <inheritdoc />
-        public bool IsChannelOnline(ChannelIdentifier channel)
+        public bool IsChannelConnected(ChannelIdentifier channel)
         {
             return _knownClients.TryGetValue(channel, out _);
         }
@@ -146,13 +146,16 @@ namespace Yacs
         }
 
         /// <inheritdoc />
-        public event EventHandler<ConnectionReceivedEventArgs> ConnectionReceived;
+        public event EventHandler<DiscoveryRequestReceivedEventArgs> DiscoveryRequestReceived;
 
         /// <inheritdoc />
-        public event EventHandler<DiscoveryRequestEventArgs> DiscoveryRequestReceived;
+        public event EventHandler<ChannelConnectedEventArgs> ChannelConnected;
 
         /// <inheritdoc />
-        public event EventHandler<ConnectionLostEventArgs> ConnectionLost;
+        public event EventHandler<ChannelDisconnectedEventArgs> ChannelDisconnected;
+
+        /// <inheritdoc />
+        public event EventHandler<ChannelRefusedEventArgs> ChannelRefused;
 
         /// <inheritdoc />
         public event EventHandler<StringMessageReceivedEventArgs> StringMessageReceived;
@@ -197,30 +200,39 @@ namespace Yacs
         }
 
         /// <summary>
-        /// Triggers a <see cref="ConnectionReceived"/> event.
+        /// Triggers a <see cref="ChannelConnected"/> event.
         /// </summary>
         /// <param name="e">Event arguments.</param>
-        protected virtual void OnConnectionReceived(ConnectionReceivedEventArgs e)
+        protected virtual void OnChannelConnected(ChannelConnectedEventArgs e)
         {
-            ConnectionReceived?.Invoke(this, e);
+            ChannelConnected?.Invoke(this, e);
         }
 
         /// <summary>
         /// Triggers a <see cref="DiscoveryRequestReceived"/> event.
         /// </summary>
         /// <param name="e">Event arguments.</param>
-        protected virtual void OnDiscoveryRequestReceived(DiscoveryRequestEventArgs e)
+        protected virtual void OnDiscoveryRequestReceived(DiscoveryRequestReceivedEventArgs e)
         {
             DiscoveryRequestReceived?.Invoke(this, e);
         }
 
         /// <summary>
-        /// Triggers a <see cref="ConnectionLost"/> event.
+        /// Triggers a <see cref="ChannelDisconnected"/> event.
         /// </summary>
         /// <param name="e">Event arguments.</param>
-        protected virtual void OnConnectionLost(ConnectionLostEventArgs e)
+        protected virtual void OnChannelDisconnected(ChannelDisconnectedEventArgs e)
         {
-            ConnectionLost?.Invoke(this, e);
+            ChannelDisconnected?.Invoke(this, e);
+        }
+
+        /// <summary>
+        /// Triggers a <see cref="ChannelRefused"/> event.
+        /// </summary>
+        /// <param name="e">Event arguments.</param>
+        protected virtual void OnChannelRefused(ChannelRefusedEventArgs e)
+        {
+            ChannelRefused?.Invoke(this, e);
         }
 
         /// <summary>
@@ -257,8 +269,8 @@ namespace Yacs
                         if (_options.MaximumChannels == 0 || _knownClients.Count < _options.MaximumChannels)
                         {
                             newChannel = new Channel(tcpClient, _newChannelOptions);
-                            newChannel.ConnectionLost += Channel_ConnectionLost;
-                            if (_options.Encoder == null)
+                            newChannel.Disconnected += Channel_Disconnected;
+                            if (_options.Encoding == null)
                             {
                                 newChannel.ByteMessageReceived += Channel_ByteMessageReceived;
                             }
@@ -279,15 +291,15 @@ namespace Yacs
                         }
                         else
                         {
-                            var connectionLostEventArgs = new ConnectionLostEventArgs(new ChannelIdentifier(tcpClient.Client.RemoteEndPoint), "Connection refused. The number of active connections has reached the limit.");
+                            var connectionRefusedEventArgs = new ChannelRefusedEventArgs(new ChannelIdentifier(tcpClient.Client.RemoteEndPoint));
                             tcpClient.Close();
-                            OnConnectionLost(connectionLostEventArgs);
+                            OnChannelRefused(connectionRefusedEventArgs);
                         }
                         
                         if (newChannel != null)
                         {
-                            var connectionReceivedEventArgs = new ConnectionReceivedEventArgs(newChannel.Identifier);
-                            OnConnectionReceived(connectionReceivedEventArgs);
+                            var connectionReceivedEventArgs = new ChannelConnectedEventArgs(newChannel.Identifier);
+                            OnChannelConnected(connectionReceivedEventArgs);
                         }
                     }
                     Task.Delay(DEFAULT_DELAY);
@@ -320,7 +332,7 @@ namespace Yacs
                             var response = DiscoveryMessage.CreateReply(_port);
                             _discoveryAgent.Send(response, response.Length, RemoteIpEndPoint);
 
-                            var discoveryRequestEventArgs = new DiscoveryRequestEventArgs(RemoteIpEndPoint.ToString());
+                            var discoveryRequestEventArgs = new DiscoveryRequestReceivedEventArgs(RemoteIpEndPoint.ToString());
                             OnDiscoveryRequestReceived(discoveryRequestEventArgs);
                         }
                     }
@@ -337,14 +349,14 @@ namespace Yacs
             }
         }
 
-        private void Channel_ConnectionLost(object sender, ConnectionLostEventArgs e)
+        private void Channel_Disconnected(object sender, ChannelDisconnectedEventArgs e)
         {
-            if (_knownClients.TryRemove(e.EndPoint, out var channel))
+            if (_knownClients.TryRemove(e.ChannelIdentifier, out var channel))
             {
                 channel.Dispose();
             }
             
-            OnConnectionLost(e);
+            OnChannelDisconnected(e);
         }
 
         private void Channel_StringMessageReceived(object sender, StringMessageReceivedEventArgs e)
