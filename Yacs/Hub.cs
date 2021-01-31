@@ -146,7 +146,7 @@ namespace Yacs
                     // Perform a blocking call to accept requests.
                     TcpClient tcpClient = _tcpServer.AcceptTcpClient();
 
-                    if (_enabled)
+                    if (_enabled && ChannelConnected != null)
                     {
                         var newChannel = new Channel(tcpClient, _newChannelOptions);       
 
