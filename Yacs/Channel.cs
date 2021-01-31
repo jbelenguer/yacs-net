@@ -1,12 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Yacs.Events;
 using Yacs.Exceptions;
-using Yacs.MessageModels;
 using Yacs.Options;
 using Yacs.Services;
 
@@ -21,7 +20,7 @@ namespace Yacs
         private readonly CancellationTokenSource _source = new CancellationTokenSource();
         private readonly Task _messageReceptionTask;
         private readonly ChannelOptions _options;
-        private readonly Decoder _decoder;
+        private readonly Protocol _protocol;
         private bool _disposedValue;
 
         /// <inheritdoc/>
@@ -33,9 +32,9 @@ namespace Yacs
 
             Identifier = new ChannelIdentifier(tcpClient.Client.RemoteEndPoint);
             _options = options;
-            _decoder = _options.Encoding?.GetDecoder();
             _tcpClient = tcpClient;
             _messageReceptionTask = Task.Run(ReceptionLoop, _source.Token);
+            _protocol = new Protocol();
         }
 
         /// <summary>
@@ -63,14 +62,14 @@ namespace Yacs
                 {
                     EnableBroadcast = true
                 };
-                var discoverPacket = DiscoveryMessage.Request;
+                var discoverPacket = Protocol.CreateDiscoveryRequestMessage();
                 await discoveryAgent.SendAsync(discoverPacket, discoverPacket.Length, new IPEndPoint(IPAddress.Broadcast, broadcastPort));
 
                 var responseTask = discoveryAgent.ReceiveAsync();
                 if (await Task.WhenAny(responseTask, Task.Delay(timeout)) == responseTask)
                 {
                     var serverResponse = await responseTask;
-                    serverResponse.RemoteEndPoint.Port = DiscoveryMessage.ParseDiscoveryPort(serverResponse.Buffer);
+                    serverResponse.RemoteEndPoint.Port = Protocol.DiscoveryResponseReceived(serverResponse.Buffer);
                     discoveryAgent.Close();
 
                     return serverResponse.RemoteEndPoint;
@@ -95,17 +94,8 @@ namespace Yacs
             {
                 throw new InvalidOperationException($"The channel has no configured encoder, so only bytes can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoding)} for more information.");
             }
-            var msg = _options.Encoding.GetBytes(message);
-            try
-            {
-                var stream = _tcpClient.GetStream();
-                stream.Write(msg, 0, msg.Length);
-            }
-            catch (Exception e)
-            {
-                _source.Cancel();
-                throw new SendMessageException(Identifier, e);
-            }
+            var byteArrayMessage = _options.Encoding.GetBytes(message);
+            SendByteArray(byteArrayMessage);
         }
 
         /// <inheritdoc />
@@ -117,16 +107,7 @@ namespace Yacs
             {
                 throw new InvalidOperationException($"The channel has a configured encoder, so only strings can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoding)} for more information.");
             }
-            try
-            {
-                var stream = _tcpClient.GetStream();
-                stream.Write(message, 0, message.Length);
-            }
-            catch (Exception e)
-            {
-                _source.Cancel();
-                throw new SendMessageException(Identifier, e);
-            }
+            SendByteArray(message);
         }
 
         /// <inheritdoc />
@@ -160,8 +141,8 @@ namespace Yacs
                     try
                     {
                         _source?.Cancel();
-                    } 
-                    catch(Exception) { }
+                    }
+                    catch (Exception) { }
                     _tcpClient?.Close();
                     _source?.Dispose();
                 }
@@ -226,25 +207,9 @@ namespace Yacs
                                 break;
                             }
                         }
-                        if (_options.Encoding == null)
-                        {
-                            var byteMessage = new byte[offset];
-                            Array.Copy(buffer, byteMessage, offset);
-                            OnByteMessageReceived(new ByteMessageReceivedEventArgs(Identifier, byteMessage));
-                        }
-                        else
-                        {
-                            var decodeableCharacters = _decoder.GetCharCount(buffer, 0, offset, false);
-                            if (decodeableCharacters > 0)
-                            {
-                                var charPayload = new char[decodeableCharacters];
-                                var decodedChars = _decoder.GetChars(buffer, 0, offset, charPayload, 0, false);
-                                if (decodedChars > 0)
-                                {
-                                    OnStringMessageReceived(new StringMessageReceivedEventArgs(Identifier, new string(charPayload)));
-                                }
-                            }
-                        }
+
+                        var messages = _protocol.DataReceived(buffer, offset);
+                        RaiseMessageReceivedEvents(messages);
                     }
                     else if (_options.ActiveMonitoring && _tcpClient.Client.Poll(0, SelectMode.SelectRead))
                     {
@@ -268,6 +233,39 @@ namespace Yacs
             catch (Exception e)
             {
                 OnDisconnected(new ChannelDisconnectedEventArgs(Identifier, e));
+            }
+        }
+
+        private void RaiseMessageReceivedEvents(List<byte[]> messages)
+        {
+            if (_options.Encoding == null)
+            {
+                foreach (var message in messages)
+                {
+                    OnByteMessageReceived(new ByteMessageReceivedEventArgs(Identifier, message));
+                }
+            }
+            else
+            {
+                foreach (var message in messages)
+                {
+                    OnStringMessageReceived(new StringMessageReceivedEventArgs(Identifier, _options.Encoding.GetString(message)));
+                }
+            }
+        }
+
+        private void SendByteArray(byte[] byteArrayMessage)
+        {
+            try
+            {
+                var protocolMessage = Protocol.CreateDataMessage(byteArrayMessage);
+                var stream = _tcpClient.GetStream();
+                stream.Write(protocolMessage, 0, protocolMessage.Length);
+            }
+            catch (Exception e)
+            {
+                _source.Cancel();
+                throw new SendMessageException(Identifier, e);
             }
         }
     }
