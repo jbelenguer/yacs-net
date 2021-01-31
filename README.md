@@ -11,14 +11,14 @@ Yacs is an abstraction over the `TcpClient` class from .NET designed to make com
 ```cs
 using Yacs;
 
-// Create a new Yacs server listening on port 1234.
-var server = new Server(1234);
+// Create a new Yacs hub listening on port 1234.
+var hub = new Hub(1234);
 
-// Create a new Yacs channel to connect to the server.
+// Create a new Yacs channel to connect to the hub.
 var channel = new Channel("127.0.0.1", 1234);
 
 // Send a message.
-channel.Send("Hello, this Yacs.");
+channel.Send("Hello, this is Yacs.");
 ```
 
 ## Motivation
@@ -39,43 +39,47 @@ For basic usage you only need the classes in the namespace `Yacs`. So:
 using Yacs;
 ```
 
-### Server
+### Hub
 
-A Yacs server can be instantiated as follows:
+A Yacs hub can be used to accept channel connections, and can be instantiated as follows:
 
 ```cs
-var server = new Server(port);
+var hub = new Hub(port);
 ```
 
-This will start your new server, listening on the indicated port. This by itself is not very useful, so what you can do next is subscribe to the events you are interested in. For instance, you could subscribe to new messages received with:
+This will start your new hub, listening on the indicated port. What you can do next is subscribe to the event that is raised when a channel connects to the hub:
 
 ```cs
-server.StringMessageReceived += Server_StringMessageReceived;
+hub.ChannelConnected += Hub_ChannelConnected;
 ```
 
-Every event will identify the channel that triggered it, so it is easy to implement a reply with something like the following:
+The event arguments will contain an `IChannel` instance, a reference to which can be kept and used in the same way as if it was created directly:
 
 ```cs
-private static void MyServer_StringMessageReceived(object sender, StringMessageReceivedEventArgs e)
+private void Hub_ChannelConnected(object sender, ChannelConnectedEventArgs e)
 {
-    _server.Send(e.ChannelIdentifier, "Ok, copy!");
+   _channels.Add(e.Channel);
 }
 ```
 
+Because `IChannel` implements `IDisposable`, remember to dispose of any channels you receive from the hub once you no longer need to communicate through them.
+
 ### Channel
 
-To create a channel and send some data to the server, it is as easy as:
+To create a channel and send some data to a hub, it is as easy as:
 
 ```cs
 var channel = new Channel(host, port);
 client.Send("TEST #1");
 ```
 
-Capturing replies from servers is also quite easy, just subscribe to the event:
+Capturing replies from hubs is also quite easy, just subscribe to the event:
 
 ```cs
 channel.StringMessageReceived += Client_StringMessageReceived;
 ```
+
+Remember that using a channel you've created yourself is exactly the same as using a channel provided by a hub.
 
 ## Attributions
 Icon made by <a href="https://www.flaticon.com/authors/srip" title="srip">srip</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a>
