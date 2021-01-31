@@ -209,7 +209,10 @@ namespace Yacs
                         }
 
                         var messages = _protocol.DataReceived(buffer, offset);
-                        RaiseMessageReceivedEvents(messages);
+                        if (messages.Count > 0)
+                        {
+                            RaiseMessageReceivedEvents(messages);
+                        }
                     }
                     else if (_options.ActiveMonitoring && _tcpClient.Client.Poll(0, SelectMode.SelectRead))
                     {

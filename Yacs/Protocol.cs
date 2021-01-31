@@ -179,11 +179,12 @@ namespace Yacs
             {
                 if (_sectionByteCount == _payloadBuffer.Length)
                 {
+                    message = _payloadBuffer;
+
                     // Start reading the length buffer again
                     _payloadBuffer = null;
                     _sectionByteCount = 0;
 
-                    message = _payloadBuffer;
                 }
             }
 
