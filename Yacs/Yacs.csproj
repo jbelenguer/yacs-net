@@ -11,6 +11,7 @@
     <PackageProjectUrl>https://github.com/jbelenguer/yacs-net</PackageProjectUrl>
     <PackageIcon>yacs_64.png</PackageIcon>
     <Authors>Yacs Contributors</Authors>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -34,6 +35,10 @@
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Memory" Version="4.5.4" />
   </ItemGroup>
 
 

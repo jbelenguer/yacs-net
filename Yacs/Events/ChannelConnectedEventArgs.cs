@@ -8,13 +8,13 @@ namespace Yacs.Events
     public class ChannelConnectedEventArgs : EventArgs
     {
         /// <summary>
-        /// Gets the identifier of the connected channel.
+        /// Gets the connected channel.
         /// </summary>
-        public ChannelIdentifier ChannelIdentifier { get; }
+        public IChannel Channel { get; }
 
-        internal ChannelConnectedEventArgs(ChannelIdentifier channelIdentifier)
+        internal ChannelConnectedEventArgs(IChannel channel)
         {
-            ChannelIdentifier = channelIdentifier;
+            Channel = channel;
         }
 
     }

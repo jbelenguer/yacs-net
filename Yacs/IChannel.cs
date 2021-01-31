@@ -7,7 +7,7 @@ namespace Yacs
     /// <summary>
     /// Represents a communication channel.
     /// </summary>
-    public interface IChannel
+    public interface IChannel : IDisposable
     {
         /// <summary>
         /// Gets the identifier for this channel.
