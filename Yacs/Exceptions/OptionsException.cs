@@ -3,7 +3,7 @@
 namespace Yacs.Exceptions
 {
     /// <summary>
-    /// Represents an error in the configuration options of an <see cref="IServer"/> or <see cref="IChannel"/>.
+    /// Represents an error in the configuration options of an <see cref="IHub"/> or <see cref="IChannel"/>.
     /// </summary>
     public class OptionsException : Exception
     {

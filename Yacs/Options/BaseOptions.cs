@@ -3,7 +3,7 @@
 namespace Yacs.Options
 {
     /// <summary>
-    /// Represents common options for <see cref="Channel"/> and <see cref="Server"/> alike.
+    /// Represents common options for <see cref="Channel"/> and <see cref="Hub"/> alike.
     /// </summary>
     public abstract class BaseOptions
     {
