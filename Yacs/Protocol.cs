@@ -75,7 +75,7 @@ namespace Yacs
         }
 
         /// <summary>
-        /// Parses a discovery reply, returning the port in which the remote <see cref="Server"/> is listening. 
+        /// Parses a discovery reply, returning the port in which the remote <see cref="Hub"/> is listening. 
         /// </summary>
         /// <param name="message">Message to parse.</param>
         /// <returns></returns>

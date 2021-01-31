@@ -12,7 +12,7 @@ using Yacs.Services;
 namespace Yacs
 {
     /// <inheritdoc cref="IChannel" />
-    public class Channel : IChannel, IDisposable
+    public class Channel : IChannel
     {
         private const int DEFAULT_DELAY = 100;
 
