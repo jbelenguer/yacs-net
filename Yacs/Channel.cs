@@ -34,7 +34,7 @@ namespace Yacs
             _options = options;
             _tcpClient = tcpClient;
             _messageReceptionTask = Task.Run(ReceptionLoop, _source.Token);
-            _protocol = new Protocol(_options.MaxMessageSize);
+            _protocol = new Protocol();
         }
 
         /// <summary>
@@ -95,17 +95,7 @@ namespace Yacs
                 throw new InvalidOperationException($"The channel has no configured encoder, so only bytes can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoding)} for more information.");
             }
             var byteArrayMessage = _options.Encoding.GetBytes(message);
-            try
-            {
-                var protocolMessage = Protocol.CreateDataMessage(byteArrayMessage);
-                var stream = _tcpClient.GetStream();
-                stream.Write(protocolMessage, 0, protocolMessage.Length);
-            }
-            catch (Exception e)
-            {
-                _source.Cancel();
-                throw new SendMessageException(Identifier, e);
-            }
+            SendByteArray(byteArrayMessage);
         }
 
         /// <inheritdoc />
@@ -117,17 +107,7 @@ namespace Yacs
             {
                 throw new InvalidOperationException($"The channel has a configured encoder, so only strings can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoding)} for more information.");
             }
-            try
-            {
-                var protocolMessage = Protocol.CreateDataMessage(message);
-                var stream = _tcpClient.GetStream();
-                stream.Write(protocolMessage, 0, protocolMessage.Length);
-            }
-            catch (Exception e)
-            {
-                _source.Cancel();
-                throw new SendMessageException(Identifier, e);
-            }
+            SendByteArray(message);
         }
 
         /// <inheritdoc />
@@ -271,6 +251,21 @@ namespace Yacs
                 {
                     OnStringMessageReceived(new StringMessageReceivedEventArgs(Identifier, _options.Encoding.GetString(message)));
                 }
+            }
+        }
+
+        private void SendByteArray(byte[] byteArrayMessage)
+        {
+            try
+            {
+                var protocolMessage = Protocol.CreateDataMessage(byteArrayMessage);
+                var stream = _tcpClient.GetStream();
+                stream.Write(protocolMessage, 0, protocolMessage.Length);
+            }
+            catch (Exception e)
+            {
+                _source.Cancel();
+                throw new SendMessageException(Identifier, e);
             }
         }
     }

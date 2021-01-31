@@ -16,8 +16,6 @@ namespace Yacs
     {
         private const int HEADER_SIZE = 4;
 
-        private readonly int _maxMessageSize;
-
         private readonly byte[] _headerBuffer;
         private byte[] _payloadBuffer;
 
@@ -26,11 +24,9 @@ namespace Yacs
         /// <summary>
         /// Creates a new <see cref="Protocol"/> instance. We should create a protocol object per stream.
         /// </summary>
-        /// <param name="maxMessageSize">Protection against DoS</param>
-        public Protocol(int maxMessageSize)
+        public Protocol()
         {
             _headerBuffer = new byte[HEADER_SIZE];
-            _maxMessageSize = maxMessageSize;
         }
 
         /// <summary>
@@ -57,7 +53,10 @@ namespace Yacs
         /// <returns></returns>
         public static byte[] CreateDiscoveryRequestMessage()
         {
-            return GenerateHeader(0);
+            var messagePayload = new byte[] { 1, 4 };
+            byte[] fullMessage = CreateDataMessage(messagePayload);
+
+            return fullMessage;
         }
 
         /// <summary>
@@ -166,17 +165,10 @@ namespace Yacs
                 {
                     int payloadLength = ReadHeader(_headerBuffer);
 
-                    if (payloadLength < 0)
-                        throw new System.Net.ProtocolViolationException("Message header seems corrupt and this may indicate a desynchronisation.");
+                    if (payloadLength <= 0)
+                        throw new System.Net.ProtocolViolationException("Message header indicates 0 or negative message length.");
 
-                    if (_maxMessageSize > 0 && payloadLength > _maxMessageSize)
-                        throw new System.Net.ProtocolViolationException($"Message length {payloadLength.ToString(System.Globalization.CultureInfo.InvariantCulture)} is larger than maximum message size {_maxMessageSize.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
-
-                    if (payloadLength == 0)
-                    {
-                        _payloadBuffer = null;
-                    }
-                    else
+                    if (payloadLength > 0)
                     {
                         _payloadBuffer = new byte[payloadLength];
                     }
