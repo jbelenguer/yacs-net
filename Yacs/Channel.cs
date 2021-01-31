@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Yacs.Events;
@@ -20,7 +20,6 @@ namespace Yacs
         private readonly CancellationTokenSource _source = new CancellationTokenSource();
         private readonly Task _messageReceptionTask;
         private readonly ChannelOptions _options;
-        private readonly Decoder _decoder;
         private readonly Protocol _protocol;
         private bool _disposedValue;
 
@@ -33,7 +32,6 @@ namespace Yacs
 
             Identifier = new ChannelIdentifier(tcpClient.Client.RemoteEndPoint);
             _options = options;
-            _decoder = _options.Encoding?.GetDecoder();
             _tcpClient = tcpClient;
             _messageReceptionTask = Task.Run(ReceptionLoop, _source.Token);
             _protocol = new Protocol(_options.MaxMessageSize);
@@ -212,7 +210,6 @@ namespace Yacs
 
                 // Get a stream object for reading and writing
                 NetworkStream stream = _tcpClient.GetStream();
-                _protocol.ProtocolMessageReceived += Protocol_MessageReceived;
 
                 while (true)
                 {
@@ -231,7 +228,8 @@ namespace Yacs
                             }
                         }
 
-                        _protocol.DataReceived(buffer, offset);
+                        var messages = _protocol.DataReceived(buffer, offset);
+                        RaiseMessageReceivedEvents(messages);
                     }
                     else if (_options.ActiveMonitoring && _tcpClient.Client.Poll(0, SelectMode.SelectRead))
                     {
@@ -258,25 +256,20 @@ namespace Yacs
             }
         }
 
-        private void Protocol_MessageReceived(object sender, ProtocolMessageReceivedEventArgs e)
+        private void RaiseMessageReceivedEvents(List<byte[]> messages)
         {
             if (_options.Encoding == null)
             {
-                var byteMessage = new byte[e.Message.Length];
-                Array.Copy(e.Message, byteMessage, e.Message.Length);
-                OnByteMessageReceived(new ByteMessageReceivedEventArgs(Identifier, byteMessage));
+                foreach (var message in messages)
+                {
+                    OnByteMessageReceived(new ByteMessageReceivedEventArgs(Identifier, message));
+                }
             }
             else
             {
-                var decodeableCharacters = _decoder.GetCharCount(e.Message, 0, e.Message.Length, false);
-                if (decodeableCharacters > 0)
+                foreach (var message in messages)
                 {
-                    var charPayload = new char[decodeableCharacters];
-                    var decodedChars = _decoder.GetChars(e.Message, 0, e.Message.Length, charPayload, 0, false);
-                    if (decodedChars > 0)
-                    {
-                        OnStringMessageReceived(new StringMessageReceivedEventArgs(Identifier, new string(charPayload)));
-                    }
+                    OnStringMessageReceived(new StringMessageReceivedEventArgs(Identifier, _options.Encoding.GetString(message)));
                 }
             }
         }

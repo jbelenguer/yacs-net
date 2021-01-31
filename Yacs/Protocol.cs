@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Buffers.Binary;
-using Yacs.Events;
+using System.Collections.Generic;
 
 namespace Yacs
 {
@@ -27,7 +27,7 @@ namespace Yacs
         /// Creates a new <see cref="Protocol"/> instance. We should create a protocol object per stream.
         /// </summary>
         /// <param name="maxMessageSize">Protection against DoS</param>
-        internal Protocol(int maxMessageSize)
+        public Protocol(int maxMessageSize)
         {
             _headerBuffer = new byte[HEADER_SIZE];
             _maxMessageSize = maxMessageSize;
@@ -38,7 +38,7 @@ namespace Yacs
         /// </summary>
         /// <param name="messagePayload">Message to send.</param>
         /// <returns></returns>
-        internal static byte[] CreateDataMessage(byte[] messagePayload)
+        public static byte[] CreateDataMessage(byte[] messagePayload)
         {
             if (messagePayload?.Length <= 0)
                 throw new System.Net.ProtocolViolationException("The message is empty");
@@ -55,7 +55,7 @@ namespace Yacs
         /// Creates a new discovery message which is essentially an empty message with a header.
         /// </summary>
         /// <returns></returns>
-        internal static byte[] CreateDiscoveryRequestMessage()
+        public static byte[] CreateDiscoveryRequestMessage()
         {
             return GenerateHeader(0);
         }
@@ -65,7 +65,7 @@ namespace Yacs
         /// </summary>
         /// <param name="portNumber">TCP port number to be used.</param>
         /// <returns></returns>
-        internal static byte[] CreateDiscoveryResponseMessage(int portNumber)
+        public static byte[] CreateDiscoveryResponseMessage(int portNumber)
         {
             var messagePayload = new byte[sizeof(int)];
             BinaryPrimitives.WriteInt32BigEndian(messagePayload, portNumber);
@@ -80,7 +80,7 @@ namespace Yacs
         /// </summary>
         /// <param name="message">Message to parse.</param>
         /// <returns></returns>
-        internal static int DiscoveryResponseReceived(byte[] message)
+        public static int DiscoveryResponseReceived(byte[] message)
         {
             var messageSize = ReadHeader(message);
             int portRead = 0;
@@ -98,7 +98,7 @@ namespace Yacs
         /// </summary>
         /// <param name="discoveryRequest"></param>
         /// <returns></returns>
-        internal static bool ValidateDiscoveryRequest(byte[] discoveryRequest)
+        public static bool ValidateDiscoveryRequest(byte[] discoveryRequest)
         {
             var payloadSize = ReadHeader(discoveryRequest);
             return discoveryRequest.Length == HEADER_SIZE + payloadSize;
@@ -110,11 +110,12 @@ namespace Yacs
         /// <param name="incomingBuffer">Byte buffer to read bytes from.</param>
         /// <param name="bytesAvailable">Number of bytes available in the buffer.</param>
         /// <exception cref="System.Net.ProtocolViolationException"></exception>
-        internal void DataReceived(byte[] incomingBuffer, int bytesAvailable)
+        public List<byte[]> DataReceived(byte[] incomingBuffer, int bytesAvailable)
         {
+            var receivedMessages = new List<byte[]>();
             if (incomingBuffer.Length < bytesAvailable)
             {
-                throw new Exception("");
+                throw new System.Net.ProtocolViolationException("Bytes available in the buffer cannot be bigger than the buffer itself.");
             }
             int index = 0;
             while (index != bytesAvailable)
@@ -131,19 +132,11 @@ namespace Yacs
                 }
                 index += transferredBytes;
                 _sectionByteCount += transferredBytes;
-                ParseSectionBuffers();
+                var message = ParseSectionBuffers();
+                if (message != null)
+                    receivedMessages.Add(message);
             }
-        }
-
-        internal event EventHandler<ProtocolMessageReceivedEventArgs> ProtocolMessageReceived;
-
-        /// <summary>
-        /// Triggers a <see cref="ProtocolMessageReceived"/> event.
-        /// </summary>
-        /// <param name="e">Event arguments.</param>
-        protected virtual void OnProtocolMessageReceived(ProtocolMessageReceivedEventArgs e)
-        {
-            ProtocolMessageReceived?.Invoke(this, e);
+            return receivedMessages;
         }
 
         private int TransferBytesToSectionBuffer(byte[] incoming, int incomingByteCount, int startIndex, byte[] sectionBuffer)
@@ -164,8 +157,9 @@ namespace Yacs
         /// <para>    - We have a payload buffer and we have received the expected number of bytes.</para>
         /// </summary>
         /// <exception cref="System.Net.ProtocolViolationException">Indicates an unrecoverable problem. The protocol instance must be discarded.</exception>
-        private void ParseSectionBuffers()
+        private byte[] ParseSectionBuffers()
         {
+            byte[] message = null;
             if (_payloadBuffer == null)
             {
                 if (_sectionByteCount == HEADER_SIZE)
@@ -193,14 +187,15 @@ namespace Yacs
             {
                 if (_sectionByteCount == _payloadBuffer.Length)
                 {
-                    var args = new ProtocolMessageReceivedEventArgs(_payloadBuffer);
-                    OnProtocolMessageReceived(args);
-
                     // Start reading the length buffer again
                     _payloadBuffer = null;
                     _sectionByteCount = 0;
+
+                    message = _payloadBuffer;
                 }
             }
+
+            return message;
         }
 
         private static byte[] GenerateHeader(int messageSize)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Yacs.Events
 {
@@ -15,9 +16,9 @@ namespace Yacs.Events
         /// <summary>
         /// Gets the received message.
         /// </summary>
-        public byte[] Message { get; }
+        public IReadOnlyList<byte> Message { get; }
         
-        internal ByteMessageReceivedEventArgs(ChannelIdentifier channelIdentifier, byte[] message)
+        internal ByteMessageReceivedEventArgs(ChannelIdentifier channelIdentifier, IReadOnlyList<byte> message)
         {
             ChannelIdentifer = channelIdentifier;
             Message = message;
