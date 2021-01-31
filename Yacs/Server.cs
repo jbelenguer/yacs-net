@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Yacs.Events;
 using Yacs.Exceptions;
-using Yacs.MessageModels;
 using Yacs.Options;
 using Yacs.Services;
 
@@ -107,7 +106,7 @@ namespace Yacs
             else
             {
                 throw new DisconnectedChannelException(destination);
-            }  
+            }
         }
 
         /// <inheritdoc />
@@ -295,7 +294,7 @@ namespace Yacs
                             tcpClient.Close();
                             OnChannelRefused(connectionRefusedEventArgs);
                         }
-                        
+
                         if (newChannel != null)
                         {
                             var connectionReceivedEventArgs = new ChannelConnectedEventArgs(newChannel.Identifier);
@@ -327,9 +326,9 @@ namespace Yacs
                         // Blocks until a message returns on this socket from a remote host.
                         byte[] discoveryRequest = _discoveryAgent.Receive(ref RemoteIpEndPoint);
 
-                        if (IsDiscoveryEnabled && DiscoveryMessage.IsValidRequest(discoveryRequest))
+                        if (IsDiscoveryEnabled && Protocol.ValidateDiscoveryRequest(discoveryRequest))
                         {
-                            var response = DiscoveryMessage.CreateReply(_port);
+                            var response = Protocol.CreateDiscoveryResponseMessage(_port);
                             _discoveryAgent.Send(response, response.Length, RemoteIpEndPoint);
 
                             var discoveryRequestEventArgs = new DiscoveryRequestReceivedEventArgs(RemoteIpEndPoint.ToString());
@@ -355,7 +354,7 @@ namespace Yacs
             {
                 channel.Dispose();
             }
-            
+
             OnChannelDisconnected(e);
         }
 

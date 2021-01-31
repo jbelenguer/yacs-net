@@ -18,12 +18,18 @@ namespace Yacs.Options
         public int ReceptionBufferSize { get; set; }
 
         /// <summary>
+        /// Gets or sets the maximum size of the message in bytes. Default: 131072000 (128MB)
+        /// </summary>
+        public int MaxMessageSize { get; set; }
+
+        /// <summary>
         /// Creates a new <see cref="BaseOptions"/> object with the default values.
         /// </summary>
         public BaseOptions()
         {
             Encoding = Encoding.UTF8;
             ReceptionBufferSize = short.MaxValue;
+            MaxMessageSize = 131072000;
         }
     }
 }

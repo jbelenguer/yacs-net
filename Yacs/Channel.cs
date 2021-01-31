@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Yacs.Events;
 using Yacs.Exceptions;
-using Yacs.MessageModels;
 using Yacs.Options;
 using Yacs.Services;
 
@@ -22,6 +21,7 @@ namespace Yacs
         private readonly Task _messageReceptionTask;
         private readonly ChannelOptions _options;
         private readonly Decoder _decoder;
+        private readonly Protocol _protocol;
         private bool _disposedValue;
 
         /// <inheritdoc/>
@@ -36,6 +36,7 @@ namespace Yacs
             _decoder = _options.Encoding?.GetDecoder();
             _tcpClient = tcpClient;
             _messageReceptionTask = Task.Run(ReceptionLoop, _source.Token);
+            _protocol = new Protocol(_options.MaxMessageSize);
         }
 
         /// <summary>
@@ -63,14 +64,14 @@ namespace Yacs
                 {
                     EnableBroadcast = true
                 };
-                var discoverPacket = DiscoveryMessage.Request;
+                var discoverPacket = Protocol.CreateDiscoveryRequestMessage();
                 await discoveryAgent.SendAsync(discoverPacket, discoverPacket.Length, new IPEndPoint(IPAddress.Broadcast, broadcastPort));
 
                 var responseTask = discoveryAgent.ReceiveAsync();
                 if (await Task.WhenAny(responseTask, Task.Delay(timeout)) == responseTask)
                 {
                     var serverResponse = await responseTask;
-                    serverResponse.RemoteEndPoint.Port = DiscoveryMessage.ParseDiscoveryPort(serverResponse.Buffer);
+                    serverResponse.RemoteEndPoint.Port = Protocol.DiscoveryResponseReceived(serverResponse.Buffer);
                     discoveryAgent.Close();
 
                     return serverResponse.RemoteEndPoint;
@@ -95,11 +96,12 @@ namespace Yacs
             {
                 throw new InvalidOperationException($"The channel has no configured encoder, so only bytes can be sent. See {nameof(BaseOptions)}.{nameof(BaseOptions.Encoding)} for more information.");
             }
-            var msg = _options.Encoding.GetBytes(message);
+            var byteArrayMessage = _options.Encoding.GetBytes(message);
             try
             {
+                var protocolMessage = Protocol.CreateDataMessage(byteArrayMessage);
                 var stream = _tcpClient.GetStream();
-                stream.Write(msg, 0, msg.Length);
+                stream.Write(protocolMessage, 0, protocolMessage.Length);
             }
             catch (Exception e)
             {
@@ -119,8 +121,9 @@ namespace Yacs
             }
             try
             {
+                var protocolMessage = Protocol.CreateDataMessage(message);
                 var stream = _tcpClient.GetStream();
-                stream.Write(message, 0, message.Length);
+                stream.Write(protocolMessage, 0, protocolMessage.Length);
             }
             catch (Exception e)
             {
@@ -160,8 +163,8 @@ namespace Yacs
                     try
                     {
                         _source?.Cancel();
-                    } 
-                    catch(Exception) { }
+                    }
+                    catch (Exception) { }
                     _tcpClient?.Close();
                     _source?.Dispose();
                 }
@@ -209,6 +212,7 @@ namespace Yacs
 
                 // Get a stream object for reading and writing
                 NetworkStream stream = _tcpClient.GetStream();
+                _protocol.ProtocolMessageReceived += Protocol_MessageReceived;
 
                 while (true)
                 {
@@ -226,25 +230,8 @@ namespace Yacs
                                 break;
                             }
                         }
-                        if (_options.Encoding == null)
-                        {
-                            var byteMessage = new byte[offset];
-                            Array.Copy(buffer, byteMessage, offset);
-                            OnByteMessageReceived(new ByteMessageReceivedEventArgs(Identifier, byteMessage));
-                        }
-                        else
-                        {
-                            var decodeableCharacters = _decoder.GetCharCount(buffer, 0, offset, false);
-                            if (decodeableCharacters > 0)
-                            {
-                                var charPayload = new char[decodeableCharacters];
-                                var decodedChars = _decoder.GetChars(buffer, 0, offset, charPayload, 0, false);
-                                if (decodedChars > 0)
-                                {
-                                    OnStringMessageReceived(new StringMessageReceivedEventArgs(Identifier, new string(charPayload)));
-                                }
-                            }
-                        }
+
+                        _protocol.DataReceived(buffer, offset);
                     }
                     else if (_options.ActiveMonitoring && _tcpClient.Client.Poll(0, SelectMode.SelectRead))
                     {
@@ -268,6 +255,29 @@ namespace Yacs
             catch (Exception e)
             {
                 OnDisconnected(new ChannelDisconnectedEventArgs(Identifier, e));
+            }
+        }
+
+        private void Protocol_MessageReceived(object sender, ProtocolMessageReceivedEventArgs e)
+        {
+            if (_options.Encoding == null)
+            {
+                var byteMessage = new byte[e.Message.Length];
+                Array.Copy(e.Message, byteMessage, e.Message.Length);
+                OnByteMessageReceived(new ByteMessageReceivedEventArgs(Identifier, byteMessage));
+            }
+            else
+            {
+                var decodeableCharacters = _decoder.GetCharCount(e.Message, 0, e.Message.Length, false);
+                if (decodeableCharacters > 0)
+                {
+                    var charPayload = new char[decodeableCharacters];
+                    var decodedChars = _decoder.GetChars(e.Message, 0, e.Message.Length, charPayload, 0, false);
+                    if (decodedChars > 0)
+                    {
+                        OnStringMessageReceived(new StringMessageReceivedEventArgs(Identifier, new string(charPayload)));
+                    }
+                }
             }
         }
     }
