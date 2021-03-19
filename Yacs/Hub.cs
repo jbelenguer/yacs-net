@@ -110,8 +110,8 @@ namespace Yacs
                     IsDiscoveryEnabled = false;
                     _discoveryCancellationSource?.Cancel();
                     _newClientsCancellationSource?.Cancel();
-                    _udpServer.Close();
-                    _udpServer.Dispose();
+                    _udpServer?.Close();
+                    _udpServer?.Dispose();
                     _tcpServer.Stop();
                 }
 
