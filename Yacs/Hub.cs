@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 using Yacs.Events;
 using Yacs.Exceptions;
@@ -18,15 +17,14 @@ namespace Yacs
         private readonly int _port;
         private readonly TcpListener _tcpServer;
         private readonly UdpClient _udpServer;
-        private readonly CancellationTokenSource _discoveryCancellationSource;
-        private readonly CancellationTokenSource _newClientsCancellationSource;
         private readonly ChannelOptions _newChannelOptions;
         private readonly HubOptions _options;
 
         private readonly Task _newConnectionsTask;
-
         private readonly Task _discoveryTask;
 
+        private bool _shouldContinueDiscoveryTask;
+        private bool _shouldContinueNewConnectionsTask;
         private bool disposedValue;
         private bool _enabled = false;
 
@@ -59,8 +57,8 @@ namespace Yacs
 
             _tcpServer = new TcpListener(IPAddress.Any, port);
 
-            _discoveryCancellationSource = new CancellationTokenSource();
-            _newClientsCancellationSource = new CancellationTokenSource();
+            _shouldContinueDiscoveryTask = true;
+            _shouldContinueNewConnectionsTask = true;
 
             _newChannelOptions = new ChannelOptions
             {
@@ -73,12 +71,12 @@ namespace Yacs
             {
                 IsDiscoveryEnabled = true;
                 _udpServer = new UdpClient(_options.DiscoveryPort);
-                _discoveryTask = Task.Run(DiscoveryLoop, _discoveryCancellationSource.Token);
+                _discoveryTask = Task.Run(DiscoveryLoop);
             }
 
             _enabled = true;
             _tcpServer.Start();
-            _newConnectionsTask = Task.Run(NewConnectionListenerLoop, _newClientsCancellationSource.Token);
+            _newConnectionsTask = Task.Run(NewConnectionListenerLoop);
         }
 
         /// <inheritdoc />
@@ -108,10 +106,10 @@ namespace Yacs
                 {
                     _enabled = false;
                     IsDiscoveryEnabled = false;
-                    _discoveryCancellationSource?.Cancel();
-                    _newClientsCancellationSource?.Cancel();
-                    _udpServer.Close();
-                    _udpServer.Dispose();
+                    _shouldContinueDiscoveryTask = false;
+                    _shouldContinueNewConnectionsTask = false;
+                    _udpServer?.Close();
+                    _udpServer?.Dispose();
                     _tcpServer.Stop();
                 }
 
@@ -137,18 +135,18 @@ namespace Yacs
             DiscoveryRequestReceived?.Invoke(this, e);
         }
 
-        private void NewConnectionListenerLoop()
+        private async Task NewConnectionListenerLoop()
         {
             try
             {
-                while (true)
+                while (_shouldContinueNewConnectionsTask)
                 {
                     // Perform a blocking call to accept requests.
-                    TcpClient tcpClient = _tcpServer.AcceptTcpClient();
+                    TcpClient tcpClient = await _tcpServer.AcceptTcpClientAsync();
 
                     if (_enabled && ChannelConnected != null)
                     {
-                        var newChannel = new Channel(tcpClient, _newChannelOptions);       
+                        var newChannel = new Channel(tcpClient, _newChannelOptions);
 
                         var connectionReceivedEventArgs = new ChannelConnectedEventArgs(newChannel);
                         OnChannelConnected(connectionReceivedEventArgs);
@@ -157,7 +155,7 @@ namespace Yacs
                     {
                         tcpClient.Close();
                     }
-                    Task.Delay(DEFAULT_DELAY);
+                    await Task.Delay(DEFAULT_DELAY);
                 }
             }
             catch (InvalidOperationException e)
@@ -170,24 +168,23 @@ namespace Yacs
             }
         }
 
-        private void DiscoveryLoop()
+        private async Task DiscoveryLoop()
         {
             try
             {
-                while (true)
+                while (_shouldContinueDiscoveryTask)
                 {
-                    IPEndPoint RemoteIpEndPoint = new IPEndPoint(IPAddress.Any, 0);
                     try
                     {
                         // Blocks until a message returns on this socket from a remote host.
-                        byte[] discoveryRequest = _udpServer.Receive(ref RemoteIpEndPoint);
+                        var udpReceiveResult = await _udpServer.ReceiveAsync();
 
-                        if (IsDiscoveryEnabled && Protocol.ValidateDiscoveryRequest(discoveryRequest))
+                        if (IsDiscoveryEnabled && Protocol.ValidateDiscoveryRequest(udpReceiveResult.Buffer))
                         {
                             var response = Protocol.CreateDiscoveryResponseMessage(_port);
-                            _udpServer.Send(response, response.Length, RemoteIpEndPoint);
+                            await _udpServer.SendAsync(response, response.Length, udpReceiveResult.RemoteEndPoint);
 
-                            var discoveryRequestEventArgs = new DiscoveryRequestReceivedEventArgs(RemoteIpEndPoint.ToString());
+                            var discoveryRequestEventArgs = new DiscoveryRequestReceivedEventArgs(udpReceiveResult.RemoteEndPoint.ToString());
                             OnDiscoveryRequestReceived(discoveryRequestEventArgs);
                         }
                     }
@@ -195,7 +192,7 @@ namespace Yacs
                     {
                         Console.WriteLine(e.ToString());
                     }
-                    Task.Delay(DEFAULT_DELAY);
+                    await Task.Delay(DEFAULT_DELAY);
                 }
             }
             catch (Exception e)
