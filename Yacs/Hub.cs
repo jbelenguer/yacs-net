@@ -108,8 +108,8 @@ namespace Yacs
                     IsDiscoveryEnabled = false;
                     _shouldContinueDiscoveryTask = false;
                     _shouldContinueNewConnectionsTask = false;
-                    _udpServer.Close();
-                    _udpServer.Dispose();
+                    _udpServer?.Close();
+                    _udpServer?.Dispose();
                     _tcpServer.Stop();
                 }
 
