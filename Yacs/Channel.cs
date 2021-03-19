@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 using Yacs.Events;
 using Yacs.Exceptions;
@@ -17,10 +16,11 @@ namespace Yacs
         private const int DEFAULT_DELAY = 100;
 
         private readonly TcpClient _tcpClient;
-        private readonly CancellationTokenSource _source = new CancellationTokenSource();
         private readonly Task _messageReceptionTask;
         private readonly ChannelOptions _options;
         private readonly Protocol _protocol;
+
+        private bool _shouldContinueMessageReceptionTask;
         private bool _disposedValue;
 
         /// <inheritdoc/>
@@ -33,7 +33,8 @@ namespace Yacs
             Identifier = new ChannelIdentifier(tcpClient.Client.RemoteEndPoint);
             _options = options;
             _tcpClient = tcpClient;
-            _messageReceptionTask = Task.Run(ReceptionLoop, _source.Token);
+            _shouldContinueMessageReceptionTask = true;
+            _messageReceptionTask = Task.Run(ReceptionLoop);
             _protocol = new Protocol();
         }
 
@@ -138,13 +139,8 @@ namespace Yacs
             {
                 if (disposing)
                 {
-                    try
-                    {
-                        _source?.Cancel();
-                    }
-                    catch (Exception) { }
+                    _shouldContinueMessageReceptionTask = false;
                     _tcpClient?.Close();
-                    _source?.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
@@ -180,7 +176,7 @@ namespace Yacs
             Disconnected?.Invoke(this, e);
         }
 
-        private void ReceptionLoop()
+        private async Task ReceptionLoop()
         {
             try
             {
@@ -191,7 +187,7 @@ namespace Yacs
                 // Get a stream object for reading and writing
                 NetworkStream stream = _tcpClient.GetStream();
 
-                while (true)
+                while (_shouldContinueMessageReceptionTask)
                 {
                     if (stream.DataAvailable)
                     {
@@ -200,7 +196,7 @@ namespace Yacs
                         // Loop to receive all the data sent by the client.
                         while (stream.DataAvailable)
                         {
-                            bytesRead = stream.Read(buffer, offset, buffer.Length - offset);
+                            bytesRead = await stream.ReadAsync(buffer, offset, buffer.Length - offset);
                             offset += bytesRead;
                             if (offset >= buffer.Length)
                             {
@@ -224,12 +220,12 @@ namespace Yacs
                         if (_tcpClient.Client.Available == 0)
                             break;
                     }
-                    if (_source.Token.IsCancellationRequested)
+                    if (!_shouldContinueMessageReceptionTask)
                     {
                         break;
                     }
 
-                    Thread.Sleep(DEFAULT_DELAY);
+                    await Task.Delay(DEFAULT_DELAY);
                 }
                 OnDisconnected(new ChannelDisconnectedEventArgs(Identifier));
             }
@@ -267,7 +263,7 @@ namespace Yacs
             }
             catch (Exception e)
             {
-                _source.Cancel();
+                _shouldContinueMessageReceptionTask = false;
                 throw new SendMessageException(Identifier, e);
             }
         }
