@@ -11,7 +11,7 @@ namespace Yacs.Events
         /// <summary>
         /// Gets the identifier of the channel through which the message was received.
         /// </summary>
-        public ChannelIdentifier ChannelIdentifer { get; }
+        public ChannelIdentifier ChannelIdentifier { get; }
 
         /// <summary>
         /// Gets the received message.
@@ -20,7 +20,7 @@ namespace Yacs.Events
         
         internal ByteMessageReceivedEventArgs(ChannelIdentifier channelIdentifier, IReadOnlyList<byte> message)
         {
-            ChannelIdentifer = channelIdentifier;
+            ChannelIdentifier = channelIdentifier;
             Message = message;
         }
     }
